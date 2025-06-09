@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableHeader,
@@ -11,10 +12,10 @@ import {
   TableCaption,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, BrainCircuit, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUpDown, BrainCircuit, ArrowUp, ArrowDown, Loader2, AlertTriangle } from 'lucide-react';
 import type { TeamStats } from '@/types';
-import { mockTeams } from '@/data/mockData';
 import { TeamPerformanceDialog } from './TeamPerformanceDialog';
+import { getTeams } from '@/services/firestoreService';
 
 type SortKey = keyof TeamStats | null;
 type SortDirection = 'asc' | 'desc';
@@ -33,11 +34,30 @@ const columns: { key: keyof TeamStats; label: string; shortLabel?: string, numer
 ];
 
 export function LeagueTable() {
-  const [teamsData, setTeamsData] = useState<TeamStats[]>(mockTeams);
+  const [teamsData, setTeamsData] = useState<TeamStats[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [selectedTeam, setSelectedTeam] = useState<TeamStats | null>(null);
   const [isAnalysisDialogOpen, setIsAnalysisDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchTeams() {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const teams = await getTeams();
+        setTeamsData(teams);
+      } catch (err) {
+        console.error("Error fetching teams:", err);
+        setError("Failed to load league table. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchTeams();
+  }, []);
 
   const sortedTeams = useMemo(() => {
     if (!sortKey) return teamsData;
@@ -82,6 +102,23 @@ export function LeagueTable() {
     return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading league table...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-destructive">
+        <AlertTriangle className="h-12 w-12" />
+        <p className="mt-4">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -97,14 +134,14 @@ export function LeagueTable() {
                 {columns.map((col) => (
                   <TableHead 
                     key={col.key} 
-                    onClick={() => handleSort(col.key)}
+                    onClick={() => col.key !== 'name' && handleSort(col.key)} // Allow sorting on all but name for now
                     className={`cursor-pointer hover:bg-muted/50 ${col.numeric ? 'text-right' : 'text-left'}`}
                     title={`Sort by ${col.label}`}
                   >
                     <div className={`flex items-center ${col.numeric ? 'justify-end' : 'justify-start'}`}>
                       <span className="sm:hidden">{col.shortLabel || col.label}</span>
                       <span className="hidden sm:inline">{col.label}</span>
-                      <SortIcon columnKey={col.key} />
+                      {col.key !== 'name' && <SortIcon columnKey={col.key} />}
                     </div>
                   </TableHead>
                 ))}
@@ -147,9 +184,6 @@ export function LeagueTable() {
 }
 
 // Minimal Card components for structure, assuming Card, CardHeader, CardContent are available from shadcn/ui
-// This is a workaround because the prompt asked for small files.
-// In a real scenario, these would be imported from '@/components/ui/card'.
-
 const Card = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={`rounded-lg border bg-card text-card-foreground ${className}`} {...props} />
 );
