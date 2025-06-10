@@ -1,7 +1,8 @@
+
 'use client';
 
 import type { ReactNode } from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -22,30 +23,47 @@ interface TeamPerformanceDialogProps {
   onClose: () => void;
 }
 
+const CACHE_PREFIX = 'teamAnalysisCache_';
+
 export function TeamPerformanceDialog({ team, isOpen, onClose }: TeamPerformanceDialogProps) {
   const [analysis, setAnalysis] = useState<TeamPerformanceSummaryOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (isOpen && team) {
-      fetchAnalysis();
-    } else {
-      // Reset state when dialog is closed or team changes
-      setAnalysis(null);
-      setIsLoading(false);
-      setError(null);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, team]);
+  const getCacheKey = useCallback((currentTeam: TeamStats | null): string | null => {
+    if (!currentTeam) return null;
+    return `${CACHE_PREFIX}${currentTeam.id}_${currentTeam.played}_${currentTeam.points}`;
+  }, []);
 
-  async function fetchAnalysis() {
+  const fetchAnalysis = useCallback(async () => {
     if (!team) return;
 
     setIsLoading(true);
     setError(null);
     setAnalysis(null);
+
+    const cacheKey = getCacheKey(team);
+
+    // Try to load from cache first
+    if (cacheKey) {
+      try {
+        const cachedData = localStorage.getItem(cacheKey);
+        if (cachedData) {
+          const parsedData = JSON.parse(cachedData) as TeamPerformanceSummaryOutput;
+          setAnalysis(parsedData);
+          setIsLoading(false);
+          toast({
+            title: 'Analysis Loaded',
+            description: 'Loaded analysis from cache.',
+          });
+          return;
+        }
+      } catch (e) {
+        console.warn('Failed to parse cached analysis:', e);
+        // Proceed to fetch new data if cache is invalid
+      }
+    }
 
     try {
       const input: TeamPerformanceSummaryInput = {
@@ -60,18 +78,41 @@ export function TeamPerformanceDialog({ team, isOpen, onClose }: TeamPerformance
       };
       const result = await teamPerformanceSummary(input);
       setAnalysis(result);
+
+      // Save to cache
+      if (cacheKey && result) {
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(result));
+        } catch (e) {
+          console.warn('Failed to save analysis to cache:', e);
+        }
+      }
+
     } catch (e) {
       console.error('Error fetching team performance analysis:', e);
-      setError('Failed to generate performance analysis. Please try again.');
+      setError('No se pudo generar el análisis de rendimiento. Inténtelo de nuevo.');
       toast({
         variant: 'destructive',
         title: 'Analysis Failed',
-        description: 'Could not generate team performance analysis.',
+        description: 'No se pudo generar el análisis del rendimiento del equipo.',
       });
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [team, toast, getCacheKey]);
+
+
+  useEffect(() => {
+    if (isOpen && team) {
+      fetchAnalysis();
+    } else {
+      // Reset state when dialog is closed
+      setAnalysis(null);
+      setIsLoading(false);
+      setError(null);
+    }
+  }, [isOpen, team, fetchAnalysis]);
+
 
   let content: ReactNode;
 
@@ -79,7 +120,7 @@ export function TeamPerformanceDialog({ team, isOpen, onClose }: TeamPerformance
     content = (
       <div className="flex flex-col items-center justify-center h-48">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Generating analysis...</p>
+        <p className="mt-4 text-muted-foreground">Generando analisis...</p>
       </div>
     );
   } else if (error) {
@@ -87,7 +128,7 @@ export function TeamPerformanceDialog({ team, isOpen, onClose }: TeamPerformance
       <div className="flex flex-col items-center justify-center h-48 text-destructive">
         <AlertTriangle className="h-12 w-12" />
         <p className="mt-4">{error}</p>
-        <Button variant="outline" onClick={fetchAnalysis} className="mt-4">Retry</Button>
+        <Button variant="outline" onClick={fetchAnalysis} className="mt-4">Reintentar</Button>
       </div>
     );
   } else if (analysis) {
@@ -95,11 +136,11 @@ export function TeamPerformanceDialog({ team, isOpen, onClose }: TeamPerformance
       <>
         <DialogDescription className="space-y-4">
           <div>
-            <h3 className="font-semibold text-foreground">Performance Summary</h3>
+            <h3 className="font-semibold text-foreground">Resumen de rendimiento</h3>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{analysis.summary}</p>
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">Areas for Improvement</h3>
+            <h3 className="font-semibold text-foreground">Areas de mejora</h3>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{analysis.improvementAreas}</p>
           </div>
         </DialogDescription>
@@ -114,13 +155,13 @@ export function TeamPerformanceDialog({ team, isOpen, onClose }: TeamPerformance
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle className="font-headline">Performance Analysis: {team?.name || 'Team'}</DialogTitle>
+          <DialogTitle className="font-headline">Analisis de rendimiento: {team?.name || 'Team'}</DialogTitle>
         </DialogHeader>
         <div className="py-4">
          {content}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button variant="outline" onClick={onClose}>Cerrar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

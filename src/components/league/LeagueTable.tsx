@@ -267,7 +267,7 @@ export function LeagueTable() {
                         disabled={isUpdatingRanks}
                       >
                         <BrainCircuit className="h-5 w-5" />
-                        <span className="sr-only">Analyze</span>
+                        <span className="sr-only">Analizar</span>
                       </Button>
                       <Button
                         variant="ghost"
@@ -278,7 +278,7 @@ export function LeagueTable() {
                         disabled={isUpdatingRanks}
                       >
                         <Pencil className="h-5 w-5" />
-                        <span className="sr-only">Edit Stats</span>
+                        <span className="sr-only">Editar Stats</span>
                       </Button>
                     </TableCell>
                   </TableRow>
