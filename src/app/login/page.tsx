@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("login");
   const [currentYear, setCurrentYear] = useState<number | null>(null);
@@ -50,17 +51,25 @@ export default function LoginPage() {
     event.preventDefault();
     setError(null);
 
-    if (type === 'signup' && password !== confirmPassword) {
-      setError("Passwords do not match.");
-      toast({ variant: "destructive", title: "Signup Error", description: "Passwords do not match." });
-      return;
+    if (type === 'signup') {
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        toast({ variant: "destructive", title: "Signup Error", description: "Passwords do not match." });
+        return;
+      }
+      if (!displayName.trim()) {
+        setError("Display Name is required.");
+        toast({ variant: "destructive", title: "Signup Error", description: "Display Name is required." });
+        return;
+      }
     }
+
 
     try {
       if (type === 'login') {
         await signInWithEmail(email, password);
       } else {
-        await signUpWithEmail(email, password);
+        await signUpWithEmail(email, password, displayName);
       }
       // onSuccess, router.push('/') is handled in AuthContext
     } catch (err: any) {
@@ -151,6 +160,10 @@ export default function LoginPage() {
             </CardHeader>
              <form onSubmit={(e) => handleEmailPasswordSubmit(e, 'signup')}>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-displayName">Display Name</Label>
+                  <Input id="signup-displayName" type="text" placeholder="Your Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required disabled={isAuthenticating} />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
                   <Input id="signup-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isAuthenticating} />

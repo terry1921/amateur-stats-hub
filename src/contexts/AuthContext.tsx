@@ -10,6 +10,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
   type User as FirebaseUser,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -22,7 +23,7 @@ interface AuthContextType {
   userProfile: UserProfile | null; // Changed from userRole to full profile
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
-  signUpWithEmail: (email: string, pass: string) => Promise<FirebaseUser | null>;
+  signUpWithEmail: (email: string, pass: string, displayName: string) => Promise<FirebaseUser | null>;
   signInWithEmail: (email: string, pass: string) => Promise<FirebaseUser | null>;
   signOutUser: () => Promise<void>;
   isAuthenticating: boolean;
@@ -49,7 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           profile = await createUserProfile(
             firebaseUser.uid,
             firebaseUser.email,
-            firebaseUser.displayName,
+            firebaseUser.displayName, // This will be picked up after updateProfile
             'Viewer' // Default role
           );
         }
@@ -74,6 +75,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const result = await signInWithPopup(auth, provider);
       if (result.user) {
+        // For Google Sign-In, displayName is usually set by Google.
+        // The onAuthStateChanged listener will handle profile creation/fetching.
         handleAuthSuccess(result.user);
       }
     } catch (error) {
@@ -83,12 +86,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signUpWithEmail = async (email: string, pass: string): Promise<FirebaseUser | null> => {
+  const signUpWithEmail = async (email: string, pass: string, displayName: string): Promise<FirebaseUser | null> => {
     setIsAuthenticating(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-      handleAuthSuccess(userCredential.user);
-      return userCredential.user;
+      const user = userCredential.user;
+      // Update Firebase Auth profile with displayName
+      await updateProfile(user, { displayName });
+      // setCurrentUser explicitly here to ensure firebaseUser.displayName is available for createUserProfile in onAuthStateChanged
+      // although onAuthStateChanged should pick it up, this makes it more robust for immediate profile creation.
+      // However, the onAuthStateChanged listener is the primary handler for profile creation.
+      // Forcing a refresh or re-fetch within onAuthStateChanged might be needed if timing is an issue.
+      // For now, relying on onAuthStateChanged after updateProfile.
+      handleAuthSuccess(user);
+      return user;
     } catch (error) {
       console.error("Error signing up with email:", error);
       throw error;
