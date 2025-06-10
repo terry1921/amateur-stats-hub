@@ -30,8 +30,8 @@ interface UpdateMatchScoreDialogProps {
 }
 
 const scoreSchema = z.object({
-  homeScore: z.coerce.number().int().min(0, "Score must be a non-negative integer."),
-  awayScore: z.coerce.number().int().min(0, "Score must be a non-negative integer."),
+  homeScore: z.coerce.number().int().min(0, "El resultado debe ser un número entero no negativo."),
+  awayScore: z.coerce.number().int().min(0, "El resultado debe ser un número entero no negativo."),
 });
 
 export function UpdateMatchScoreDialog({ match, isOpen, onClose, onScoreUpdated }: UpdateMatchScoreDialogProps) {
@@ -66,19 +66,19 @@ export function UpdateMatchScoreDialog({ match, isOpen, onClose, onScoreUpdated 
     try {
       await updateMatchScore(match.id, values.homeScore, values.awayScore);
       toast({
-        title: 'Score Updated!',
-        description: `Score for ${match.homeTeam} vs ${match.awayTeam} updated to ${values.homeScore} - ${values.awayScore}.`,
+        title: 'Resultado actualizado!',
+        description: `El resultado de ${match.homeTeam} vs ${match.awayTeam} ha sido actualizado ${values.homeScore} - ${values.awayScore}.`,
       });
       onScoreUpdated();
       onClose();
     } catch (e) {
       console.error('Error updating match score:', e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      setError(`Failed to update score: ${errorMessage}`);
+      setError(`No se pudo actualizar el resultado: ${errorMessage}`);
       toast({
         variant: 'destructive',
-        title: 'Update Failed',
-        description: `Could not update score. ${errorMessage}`,
+        title: 'Actualización fallida',
+        description: `No se pudo actualizar el resultado. ${errorMessage}`,
       });
     } finally {
       setIsSubmitting(false);
@@ -91,9 +91,9 @@ export function UpdateMatchScoreDialog({ match, isOpen, onClose, onScoreUpdated 
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-headline">Update Score</DialogTitle>
+          <DialogTitle className="font-headline">Actualizar resultado</DialogTitle>
           <DialogDescription>
-            Set the score for {match.homeTeam} vs {match.awayTeam}.
+            Agrega el resultado de {match.homeTeam} vs {match.awayTeam}.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -103,7 +103,7 @@ export function UpdateMatchScoreDialog({ match, isOpen, onClose, onScoreUpdated 
               name="homeScore"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{match.homeTeam} Score</FormLabel>
+                  <FormLabel>Goles de {match.homeTeam}</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} disabled={isSubmitting} />
                   </FormControl>
@@ -116,7 +116,7 @@ export function UpdateMatchScoreDialog({ match, isOpen, onClose, onScoreUpdated 
               name="awayScore"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{match.awayTeam} Score</FormLabel>
+                  <FormLabel>Goles de {match.awayTeam}</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} disabled={isSubmitting} />
                   </FormControl>
@@ -132,16 +132,16 @@ export function UpdateMatchScoreDialog({ match, isOpen, onClose, onScoreUpdated 
             )}
             <DialogFooter className="pt-4">
               <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancelar</Button>
               </DialogClose>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving Score...
+                    Guardando resultado...
                   </>
                 ) : (
-                  'Save Score'
+                  'Guardar resultado'
                 )}
               </Button>
             </DialogFooter>

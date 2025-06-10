@@ -105,16 +105,16 @@ export function MatchSchedule() {
     try {
       await deleteMatch(matchIdToDelete);
       toast({
-        title: "Match Deleted",
-        description: "The match has been successfully deleted.",
+        title: "Partido Eliminado",
+        description: "El partido ha sido eliminado exitosamente.",
       });
       fetchMatches();
     } catch (err) {
       console.error("Error deleting match:", err);
       toast({
         variant: "destructive",
-        title: "Delete Failed",
-        description: "Could not delete the match. Please try again.",
+        title: "Eliminado fallido",
+        description: "No se pudo eliminar el partido, Inténtalo de nuevo.",
       });
     } finally {
       setIsDeleting(false);
@@ -157,7 +157,7 @@ export function MatchSchedule() {
             >
               <PlusSquare className="h-4 w-4" />
               <span className="ml-2 hidden sm:inline">Agregar Partido</span>
-              <span className="ml-2 sm:hidden">Add</span>
+              <span className="ml-2 sm:hidden">Agregar</span>
             </Button>
           </div>
         </CardHeader>
@@ -174,7 +174,7 @@ export function MatchSchedule() {
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-8">No upcoming matches scheduled.</p>
+            <p className="text-muted-foreground text-center py-8">No hay próximos partidos programados.</p>
           )}
         </CardContent>
       </Card>
@@ -192,16 +192,16 @@ export function MatchSchedule() {
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>¿Estas completamente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the match.
+              Esta acción no se puede deshacer. Se eliminara el partido permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteMatch} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
               {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" /> }
-              Delete
+              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

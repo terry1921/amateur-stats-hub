@@ -46,7 +46,7 @@ export function MatchCard({ match, onEditMatch, onDeleteMatch }: MatchCardProps)
         <CardDescription>
           {match.homeScore !== undefined && match.awayScore !== undefined 
             ? `Result: ${match.homeScore} - ${match.awayScore}`
-            : "Upcoming Match"}
+            : "Próximo partido"}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
