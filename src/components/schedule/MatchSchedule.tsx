@@ -2,10 +2,13 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
 import type { MatchInfo } from '@/types';
 import { MatchCard } from './MatchCard';
 import { getMatches, deleteMatch } from '@/services/firestoreService';
-import { Loader2, AlertTriangle, PlusSquare, Trash2 } from 'lucide-react';
+import { Loader2, AlertTriangle, PlusSquare, Trash2, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddMatchDialog } from './AddMatchDialog';
 import { UpdateMatchScoreDialog } from './UpdateMatchScoreDialog';
@@ -18,7 +21,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 
@@ -72,8 +74,15 @@ export function MatchSchedule() {
   const upcomingMatches = useMemo(() => {
     const now = new Date(); 
     return matches
-      .filter(match => match.dateTime >= now) // You might want to adjust this filter later for showing past matches too
-      .sort((a,b) => a.dateTime.getTime() - b.dateTime.getTime()); // Ensure they are sorted chronologically
+      .filter(match => match.dateTime >= now)
+      .sort((a,b) => a.dateTime.getTime() - b.dateTime.getTime());
+  }, [matches]);
+
+  const pastMatches = useMemo(() => {
+    const now = new Date();
+    return matches
+      .filter(match => match.dateTime < now)
+      .sort((a,b) => b.dateTime.getTime() - a.dateTime.getTime()); // Most recent past game first
   }, [matches]);
 
   const handleMatchAdded = () => {
@@ -123,6 +132,34 @@ export function MatchSchedule() {
     }
   };
 
+  const handlePrintUpcomingMatches = () => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const tableColumn = ["Fecha", "Hora", "Equipo local", "Equipo visitante", "Ubicación"];
+    const tableRows: (string | number)[][] = [];
+
+    upcomingMatches.forEach(match => {
+      const matchData = [
+        format(match.dateTime, 'yyyy-MM-dd'),
+        format(match.dateTime, 'HH:mm'),
+        match.homeTeam,
+        match.awayTeam,
+        match.location,
+      ];
+      tableRows.push(matchData);
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+      theme: 'grid',
+      headStyles: { fillColor: [63, 81, 181] }, // #3F51B5 (Primary Color)
+      styles: { font: 'PT Sans', fontSize: 9 },
+    });
+    doc.text("Upcoming Matches - Amateur Stats Hub", 14, 15);
+    doc.save('calendario-de-partidos.pdf');
+  };
+
 
   if (isLoading) {
     return (
@@ -143,8 +180,8 @@ export function MatchSchedule() {
   }
 
   return (
-    <>
-      <Card className="shadow-lg">
+    <div className="space-y-8">
+      <Card className="shadow-lg print-card-plain">
         <CardHeader className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <CardTitle className="font-headline text-xl sm:text-2xl">Próximos partidos</CardTitle>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto no-print-header-actions">
@@ -158,6 +195,17 @@ export function MatchSchedule() {
               <PlusSquare className="h-4 w-4" />
               <span className="ml-2 hidden sm:inline">Agregar Partido</span>
               <span className="ml-2 sm:hidden">Agregar</span>
+            </Button>
+            <Button 
+              onClick={handlePrintUpcomingMatches} 
+              variant="outline" 
+              size="sm"
+              className="w-full sm:w-auto"
+              disabled={isLoading || upcomingMatches.length === 0}
+            >
+              <Printer className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Imprimir Calendario</span>
+              <span className="ml-2 sm:hidden">Imprimir</span>
             </Button>
           </div>
         </CardHeader>
@@ -178,6 +226,29 @@ export function MatchSchedule() {
           )}
         </CardContent>
       </Card>
+
+      <Card className="shadow-lg print-card-plain">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="font-headline text-xl sm:text-2xl">Partidos Pasados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {pastMatches.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {pastMatches.map((match) => (
+                <MatchCard 
+                  key={match.id} 
+                  match={match} 
+                  onEditMatch={openUpdateScoreDialog}
+                  onDeleteMatch={handleOpenDeleteDialog}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">No hay partidos pasados para mostrar.</p>
+          )}
+        </CardContent>
+      </Card>
+
       <AddMatchDialog
         isOpen={isAddMatchDialogOpen}
         onClose={() => setIsAddMatchDialogOpen(false)}
@@ -206,6 +277,7 @@ export function MatchSchedule() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }
+

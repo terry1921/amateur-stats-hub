@@ -177,7 +177,7 @@ export function LeagueTable() {
       styles: { font: 'PT Sans', fontSize: 9 }, // Match body font if possible, adjust size
     });
     doc.text("League Table - Amateur Stats Hub", 14, 15);
-    doc.save('league-table.pdf');
+    doc.save('tabla-de-posiciones.pdf');
   };
   
   const SortIcon = ({ columnKey }: { columnKey: keyof TeamStats }) => {
