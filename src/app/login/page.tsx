@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, type FormEvent, useEffect } from 'react'; // Added useEffect here
+import { useState, type FormEvent, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("login");
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
 
 
   useEffect(() => {
@@ -29,6 +30,10 @@ export default function LoginPage() {
       router.push('/');
     }
   }, [currentUser, loading, router]);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setError(null);
@@ -182,7 +187,7 @@ export default function LoginPage() {
         </TabsContent>
       </Tabs>
        <footer className="text-center py-8 text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} Amateur Stats Hub. All rights reserved.</p>
+        {currentYear !== null ? <p>&copy; {currentYear} Amateur Stats Hub. All rights reserved.</p> : <p>&copy; Amateur Stats Hub. All rights reserved.</p>}
       </footer>
     </div>
   );

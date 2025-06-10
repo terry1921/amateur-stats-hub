@@ -28,6 +28,7 @@ import { UpdateTeamStatsDialog } from './UpdateTeamStatsDialog';
 import { RegisterTeamForm } from '@/components/team/RegisterTeamForm';
 import { getTeams, updateAllTeamRanks } from '@/services/firestoreService';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 type SortKey = keyof TeamStats | null;
 type SortDirection = 'asc' | 'desc';
@@ -46,6 +47,7 @@ const columns: { key: keyof TeamStats; label: string; shortLabel?: string, numer
 ];
 
 export function LeagueTable() {
+  const { userProfile } = useAuth();
   const [teamsData, setTeamsData] = useState<TeamStats[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -134,7 +136,7 @@ export function LeagueTable() {
 
   const handleTeamRegistered = () => {
     fetchTeamsData();
-    setIsRegisterTeamDialogOpen(false); // Close dialog on successful registration
+    setIsRegisterTeamDialogOpen(false);
   };
 
   const handleUpdateRanks = async () => {
@@ -173,8 +175,8 @@ export function LeagueTable() {
       body: tableRows,
       startY: 20,
       theme: 'grid',
-      headStyles: { fillColor: [63, 81, 181] }, // #3F51B5 (Primary Color)
-      styles: { font: 'PT Sans', fontSize: 9 }, // Match body font if possible, adjust size
+      headStyles: { fillColor: [63, 81, 181] },
+      styles: { font: 'PT Sans', fontSize: 9 },
     });
     doc.text("League Table - Amateur Stats Hub", 14, 15);
     doc.save('tabla-de-posiciones.pdf');
@@ -186,6 +188,10 @@ export function LeagueTable() {
     }
     return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
   };
+
+  const canManageTeams = userProfile?.role === 'Administrator' || userProfile?.role === 'Creator';
+  const canUpdateStats = userProfile?.role === 'Member' || userProfile?.role === 'Administrator' || userProfile?.role === 'Creator';
+  const canView = userProfile?.role; // All authenticated users can view
 
   if (isLoading && !isUpdatingRanks) { 
     return (
@@ -211,52 +217,58 @@ export function LeagueTable() {
         <CardHeader className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <CardTitle className="font-headline text-xl sm:text-2xl">Tabla de Posiciones</CardTitle>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto no-print-header-actions">
-            <Dialog open={isRegisterTeamDialogOpen} onOpenChange={setIsRegisterTeamDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="w-full sm:w-auto"
-                  disabled={isLoading || isUpdatingRanks}
-                >
-                  <PlusSquare className="h-4 w-4" />
-                  <span className="ml-2">Registrar Equipo</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="font-headline text-2xl">Register New Team</DialogTitle>
-                </DialogHeader>
-                <RegisterTeamForm 
-                  onTeamRegistered={handleTeamRegistered} 
-                  onCloseDialog={() => setIsRegisterTeamDialogOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-            <Button 
-              onClick={handleUpdateRanks} 
-              disabled={isUpdatingRanks || isLoading} 
-              variant="outline" 
-              size="sm"
-              className="w-full sm:w-auto"
-            >
-              {isUpdatingRanks ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <BarChartHorizontalBig className="h-4 w-4" />
-              )}
-              <span className="ml-2">Actualizar posiciones</span>
-            </Button>
-            <Button 
-              onClick={handlePrint} 
-              variant="outline" 
-              size="sm"
-              className="w-full sm:w-auto"
-              disabled={isLoading || isUpdatingRanks}
-            >
-              <Printer className="h-4 w-4" />
-              <span className="ml-2">Imprimir PDF</span>
-            </Button>
+            {canManageTeams && (
+              <Dialog open={isRegisterTeamDialogOpen} onOpenChange={setIsRegisterTeamDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    disabled={isLoading || isUpdatingRanks}
+                  >
+                    <PlusSquare className="h-4 w-4" />
+                    <span className="ml-2">Registrar Equipo</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="font-headline text-2xl">Register New Team</DialogTitle>
+                  </DialogHeader>
+                  <RegisterTeamForm 
+                    onTeamRegistered={handleTeamRegistered} 
+                    onCloseDialog={() => setIsRegisterTeamDialogOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
+            )}
+            {canManageTeams && (
+              <Button 
+                onClick={handleUpdateRanks} 
+                disabled={isUpdatingRanks || isLoading} 
+                variant="outline" 
+                size="sm"
+                className="w-full sm:w-auto"
+              >
+                {isUpdatingRanks ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <BarChartHorizontalBig className="h-4 w-4" />
+                )}
+                <span className="ml-2">Actualizar posiciones</span>
+              </Button>
+            )}
+             {canView && (
+              <Button 
+                onClick={handlePrint} 
+                variant="outline" 
+                size="sm"
+                className="w-full sm:w-auto"
+                disabled={isLoading || isUpdatingRanks}
+              >
+                <Printer className="h-4 w-4" />
+                <span className="ml-2">Imprimir PDF</span>
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -283,7 +295,7 @@ export function LeagueTable() {
                       </div>
                     </TableHead>
                   ))}
-                  <TableHead className="text-center whitespace-nowrap no-print-actions">Actions</TableHead>
+                  {(canUpdateStats || canView) && <TableHead className="text-center whitespace-nowrap no-print-actions">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -294,30 +306,36 @@ export function LeagueTable() {
                         {team[col.key]}
                       </TableCell>
                     ))}
-                    <TableCell className="text-center space-x-1 whitespace-nowrap no-print-actions">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openAnalysisDialog(team)}
-                        className="text-primary hover:text-primary/80 px-2"
-                        title={`Analyze ${team.name}'s performance`}
-                        disabled={isUpdatingRanks}
-                      >
-                        <BrainCircuit className="h-5 w-5" />
-                        <span className="sr-only">Analizar</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openUpdateStatsDialog(team)}
-                        className="text-accent hover:text-accent/80 px-2"
-                        title={`Edit ${team.name}'s stats`}
-                        disabled={isUpdatingRanks}
-                      >
-                        <Pencil className="h-5 w-5" />
-                        <span className="sr-only">Editar Stats</span>
-                      </Button>
-                    </TableCell>
+                    {(canUpdateStats || canView) && (
+                      <TableCell className="text-center space-x-1 whitespace-nowrap no-print-actions">
+                        {canView && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openAnalysisDialog(team)}
+                            className="text-primary hover:text-primary/80 px-2"
+                            title={`Analyze ${team.name}'s performance`}
+                            disabled={isUpdatingRanks}
+                          >
+                            <BrainCircuit className="h-5 w-5" />
+                            <span className="sr-only">Analizar</span>
+                          </Button>
+                        )}
+                        {canUpdateStats && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openUpdateStatsDialog(team)}
+                            className="text-accent hover:text-accent/80 px-2"
+                            title={`Edit ${team.name}'s stats`}
+                            disabled={isUpdatingRanks}
+                          >
+                            <Pencil className="h-5 w-5" />
+                            <span className="sr-only">Editar Stats</span>
+                          </Button>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -325,23 +343,25 @@ export function LeagueTable() {
           </div>
         </CardContent>
       </Card>
-      <TeamPerformanceDialog
-        team={selectedTeamForAnalysis}
-        isOpen={isAnalysisDialogOpen}
-        onClose={closeAnalysisDialog}
-      />
-      <UpdateTeamStatsDialog
-        team={selectedTeamForUpdate}
-        isOpen={isUpdateStatsDialogOpen}
-        onClose={closeUpdateStatsDialog}
-        onTeamUpdate={handleTeamStatsUpdated}
-      />
+      {canView && selectedTeamForAnalysis && (
+        <TeamPerformanceDialog
+          team={selectedTeamForAnalysis}
+          isOpen={isAnalysisDialogOpen}
+          onClose={closeAnalysisDialog}
+        />
+      )}
+      {canUpdateStats && selectedTeamForUpdate && (
+        <UpdateTeamStatsDialog
+          team={selectedTeamForUpdate}
+          isOpen={isUpdateStatsDialogOpen}
+          onClose={closeUpdateStatsDialog}
+          onTeamUpdate={handleTeamStatsUpdated}
+        />
+      )}
     </>
   );
 }
 
-// Re-declare Card components locally as they are used in this file only after main /ui/card was removed.
-// This keeps the component self-contained for this specific usage.
 const Card = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={`rounded-lg border bg-card text-card-foreground ${className}`} {...props} />
 );
