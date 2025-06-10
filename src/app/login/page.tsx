@@ -42,8 +42,8 @@ export default function LoginPage() {
       await signInWithGoogle();
       // onSuccess, router.push('/') is handled in AuthContext
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google. Please try again.');
-      toast({ variant: "destructive", title: "Google Sign-In Failed", description: err.message });
+      setError(err.message || 'No se pudo iniciar sesión con Google. Inténtalo de nuevo');
+      toast({ variant: "destructive", title: "Fallo el inicio de sesión con Google", description: err.message });
     }
   };
 
@@ -53,13 +53,13 @@ export default function LoginPage() {
 
     if (type === 'signup') {
       if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        toast({ variant: "destructive", title: "Signup Error", description: "Passwords do not match." });
+        setError("Las contraseñas no coinciden.");
+        toast({ variant: "destructive", title: "Error al registrar", description: "Las contraseñas no coinciden." });
         return;
       }
       if (!displayName.trim()) {
         setError("Display Name is required.");
-        toast({ variant: "destructive", title: "Signup Error", description: "Display Name is required." });
+        toast({ variant: "destructive", title: "Error al registrar", description: "El nombre es requerido." });
         return;
       }
     }
@@ -73,25 +73,25 @@ export default function LoginPage() {
       }
       // onSuccess, router.push('/') is handled in AuthContext
     } catch (err: any) {
-      let friendlyMessage = 'An unexpected error occurred. Please try again.';
+      let friendlyMessage = 'Un error inesperado ha ocurrido. Inténtalo de nuevo.';
       if (err.code) {
         switch (err.code) {
           case 'auth/user-not-found':
           case 'auth/wrong-password':
-            friendlyMessage = 'Invalid email or password.';
+            friendlyMessage = 'Correo o contraseña incorrectos.';
             break;
           case 'auth/email-already-in-use':
-            friendlyMessage = 'This email address is already in use.';
+            friendlyMessage = 'Este correo ya está registrado.';
             break;
           case 'auth/weak-password':
-            friendlyMessage = 'Password is too weak. It should be at least 6 characters.';
+            friendlyMessage = 'La contraseña debe tener al menos 6 caracteres.';
             break;
           default:
             friendlyMessage = err.message || friendlyMessage;
         }
       }
       setError(friendlyMessage);
-      toast({ variant: "destructive", title: `${type === 'login' ? 'Login' : 'Signup'} Failed`, description: friendlyMessage });
+      toast({ variant: "destructive", title: `${type === 'login' ? 'Inicio de sesión' : 'Registro'} Fallo`, description: friendlyMessage });
     }
   };
   
@@ -111,23 +111,23 @@ export default function LoginPage() {
       </div>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-md">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="login">Login</TabsTrigger>
-          <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          <TabsTrigger value="login">Inicio de sesión</TabsTrigger>
+          <TabsTrigger value="signup">Registro</TabsTrigger>
         </TabsList>
         <TabsContent value="login">
           <Card className="shadow-xl">
             <CardHeader>
-              <CardTitle className="font-headline text-2xl">Welcome Back!</CardTitle>
-              <CardDescription>Sign in to access your league stats.</CardDescription>
+              <CardTitle className="font-headline text-2xl">Bienvenido</CardTitle>
+              <CardDescription>Inicia sesión para ver las estadisticas de tu liga.</CardDescription>
             </CardHeader>
             <form onSubmit={(e) => handleEmailPasswordSubmit(e, 'login')}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
+                  <Label htmlFor="login-email">Correo</Label>
                   <Input id="login-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isAuthenticating} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
+                  <Label htmlFor="login-password">Contraseña</Label>
                   <Input id="login-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isAuthenticating} />
                 </div>
               </CardContent>
@@ -139,13 +139,13 @@ export default function LoginPage() {
                   </div>
                 )}
                 <Button type="submit" className="w-full" disabled={isAuthenticating}>
-                  {isAuthenticating ? <Loader2 className="animate-spin" /> : 'Login'}
+                  {isAuthenticating ? <Loader2 className="animate-spin" /> : 'Inicio de sesión'}
                 </Button>
-                <p className="text-sm text-muted-foreground">or</p>
+                <p className="text-sm text-muted-foreground">o</p>
                 <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isAuthenticating}>
                   {isAuthenticating ? <Loader2 className="animate-spin" /> : <>
                     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg>
-                    Sign in with Google
+                    Inicia con Google
                   </> }
                 </Button>
               </CardFooter>
@@ -155,25 +155,25 @@ export default function LoginPage() {
         <TabsContent value="signup">
           <Card className="shadow-xl">
             <CardHeader>
-              <CardTitle className="font-headline text-2xl">Create an Account</CardTitle>
-              <CardDescription>Join Amateur Stats Hub today.</CardDescription>
+              <CardTitle className="font-headline text-2xl">Crea una cuenta</CardTitle>
+              <CardDescription>Unete a Amateur Stats Hub hoy.</CardDescription>
             </CardHeader>
              <form onSubmit={(e) => handleEmailPasswordSubmit(e, 'signup')}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-displayName">Display Name</Label>
+                  <Label htmlFor="signup-displayName">Nombre</Label>
                   <Input id="signup-displayName" type="text" placeholder="Your Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required disabled={isAuthenticating} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email">Correo</Label>
                   <Input id="signup-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isAuthenticating} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password">Contraseña</Label>
                   <Input id="signup-password" type="password" placeholder="•••••••• (min. 6 characters)" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isAuthenticating} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Label htmlFor="confirm-password">Confirma contraseña</Label>
                   <Input id="confirm-password" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required disabled={isAuthenticating} />
                 </div>
               </CardContent>
@@ -185,13 +185,13 @@ export default function LoginPage() {
                   </div>
                 )}
                 <Button type="submit" className="w-full" disabled={isAuthenticating}>
-                  {isAuthenticating ? <Loader2 className="animate-spin" /> : 'Create Account'}
+                  {isAuthenticating ? <Loader2 className="animate-spin" /> : 'Crear cuenta'}
                 </Button>
-                 <p className="text-sm text-muted-foreground">or</p>
+                 <p className="text-sm text-muted-foreground">o</p>
                 <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isAuthenticating}>
                    {isAuthenticating ? <Loader2 className="animate-spin" /> : <>
                     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg>
-                    Sign up with Google
+                    Registrate con Google
                   </> }
                 </Button>
               </CardFooter>
