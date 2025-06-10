@@ -26,10 +26,10 @@ export function MatchCard({ match, onEditMatch, onDeleteMatch, userRole }: Match
           <div className="flex items-center gap-1">
             <Users className="h-6 w-6 text-accent" />
             {canEditScore && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => onEditMatch(match)} 
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onEditMatch(match)}
                 className="h-7 w-7 text-muted-foreground hover:text-accent"
                 title="Editar Marcador"
               >
@@ -38,10 +38,10 @@ export function MatchCard({ match, onEditMatch, onDeleteMatch, userRole }: Match
               </Button>
             )}
             {canDeleteMatch && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => onDeleteMatch(match.id)} 
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onDeleteMatch(match.id)}
                 className="h-7 w-7 text-muted-foreground hover:text-destructive"
                 title="Eliminar Partido"
               >
@@ -52,7 +52,7 @@ export function MatchCard({ match, onEditMatch, onDeleteMatch, userRole }: Match
           </div>
         </div>
         <CardDescription>
-          {match.homeScore !== undefined && match.awayScore !== undefined 
+          {match.homeScore !== undefined && match.awayScore !== undefined
             ? `Resultado: ${match.homeScore} - ${match.awayScore}`
             : "Próximo partido"}
         </CardDescription>
