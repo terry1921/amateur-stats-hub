@@ -189,7 +189,11 @@ export function LeagueTable() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableCaption>Clasificación oficial de la liga. Haz clic en los encabezados para ordenar. Usa acciones para analizar o editar las estadísticas del equipo.</TableCaption>
+              <TableCaption className="text-left">
+                *Clasificación oficial de la liga. 
+                <br/>*Haz clic en los encabezados para ordenar. 
+                <br/>*Usa acciones para analizar o editar las estadísticas del equipo.
+              </TableCaption>
               <TableHeader>
                 <TableRow>
                   {columns.map((col) => (
@@ -276,3 +280,4 @@ const CardTitle = ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElem
 const CardContent = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={`p-6 pt-0 ${className}`} {...props} />
 );
+
