@@ -189,7 +189,8 @@ export function LeagueTable() {
     return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
-  const canManageTeams = userProfile?.role === 'Administrator' || userProfile?.role === 'Creator';
+  const canRegisterTeams = userProfile?.role === 'Administrator' || userProfile?.role === 'Creator';
+  const canRecalculateRanks = userProfile?.role === 'Member' || userProfile?.role === 'Administrator' || userProfile?.role === 'Creator';
   const canUpdateStats = userProfile?.role === 'Member' || userProfile?.role === 'Administrator' || userProfile?.role === 'Creator';
   const canView = userProfile?.role; // All authenticated users can view
 
@@ -217,7 +218,7 @@ export function LeagueTable() {
         <CardHeader className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <CardTitle className="font-headline text-xl sm:text-2xl">Tabla de Posiciones</CardTitle>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto no-print-header-actions">
-            {canManageTeams && (
+            {canRegisterTeams && (
               <Dialog open={isRegisterTeamDialogOpen} onOpenChange={setIsRegisterTeamDialogOpen}>
                 <DialogTrigger asChild>
                   <Button 
@@ -241,7 +242,7 @@ export function LeagueTable() {
                 </DialogContent>
               </Dialog>
             )}
-            {canManageTeams && (
+            {canRecalculateRanks && (
               <Button 
                 onClick={handleUpdateRanks} 
                 disabled={isUpdatingRanks || isLoading} 
@@ -374,3 +375,6 @@ const CardTitle = ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElem
 const CardContent = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={`p-6 pt-0 ${className}`} {...props} />
 );
+
+
+    
