@@ -20,14 +20,15 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import type { TeamStats } from '@/types';
-import { updateTeamStats, type UpdateTeamStatsInput } from '@/services/firestoreService';
+import { updateTeamStats, type UpdateTeamStatsInput } from '@/services/firestoreService'; // updateTeamStats will need leagueId
 import { useToast } from '@/hooks/use-toast';
 
 interface UpdateTeamStatsDialogProps {
   team: TeamStats | null;
+  leagueId: string; // New prop
   isOpen: boolean;
   onClose: () => void;
-  onTeamUpdate: () => void; // Callback to refresh data in parent
+  onTeamUpdate: () => void; 
 }
 
 const updateTeamStatsSchema = z.object({
@@ -43,7 +44,7 @@ const updateTeamStatsSchema = z.object({
 });
 
 
-export function UpdateTeamStatsDialog({ team, isOpen, onClose, onTeamUpdate }: UpdateTeamStatsDialogProps) {
+export function UpdateTeamStatsDialog({ team, leagueId, isOpen, onClose, onTeamUpdate }: UpdateTeamStatsDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -70,12 +71,16 @@ export function UpdateTeamStatsDialog({ team, isOpen, onClose, onTeamUpdate }: U
         goalsScored: team.goalsScored,
         goalsConceded: team.goalsConceded,
       });
-      setError(null); // Clear previous errors
+      setError(null); 
     }
   }, [team, isOpen, form]);
 
   async function onSubmit(values: z.infer<typeof updateTeamStatsSchema>) {
-    if (!team) return;
+    if (!team || !leagueId) {
+        setError('Team or League ID is missing.');
+        toast({ variant: 'destructive', title: 'Error', description: 'Team or League ID is missing.' });
+        return;
+    }
 
     setIsSubmitting(true);
     setError(null);
@@ -89,13 +94,14 @@ export function UpdateTeamStatsDialog({ team, isOpen, onClose, onTeamUpdate }: U
         goalsScored: values.goalsScored,
         goalsConceded: values.goalsConceded,
       };
-      await updateTeamStats(team.id, statsInput);
+      // TODO: Modify updateTeamStats to accept leagueId
+      await updateTeamStats(team.id, statsInput, leagueId); 
       toast({
         title: 'Stats Updated!',
         description: `${team.name}'s stats have been successfully updated.`,
       });
-      onTeamUpdate(); // Trigger data refresh in parent
-      onClose(); // Close dialog
+      onTeamUpdate(); 
+      onClose(); 
     } catch (e) {
       console.error('Error updating team stats:', e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';

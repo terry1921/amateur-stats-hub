@@ -16,9 +16,9 @@ import {
   TableCaption,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, Users as UsersIcon, ShieldCheck, Edit, ShieldX } from 'lucide-react';
+import { Loader2, AlertTriangle, Users as UsersIcon, ShieldCheck, Edit, ShieldX, LayoutDashboard } from 'lucide-react';
 import { EditUserRoleDialog } from '@/components/admin/users/EditUserRoleDialog';
-import { AppHeader } from '@/components/layout/Header'; // For consistent layout
+import { AppHeader } from '@/components/layout/Header';
 import { useToast } from '@/hooks/use-toast';
 
 const Card = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -71,7 +71,7 @@ export default function UserManagementPage() {
     if (!authLoading) {
       if (!currentUser || userProfile?.role !== 'Creator') {
         toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to view this page.' });
-        router.push('/');
+        router.push('/dashboard'); // Redirect to dashboard if not authorized
       } else {
         fetchUsers();
       }
@@ -89,7 +89,7 @@ export default function UserManagementPage() {
   };
 
   const handleRoleUpdated = () => {
-    fetchUsers(); // Refresh the list after a role is updated
+    fetchUsers(); 
   };
 
   if (authLoading || (!currentUser && !authLoading) || (userProfile?.role !== 'Creator' && !authLoading) ) {
@@ -100,9 +100,8 @@ export default function UserManagementPage() {
     );
   }
   
-  // Header nav items (can be empty if not applicable for this page or simplified)
    const navItemsForMenu = [
-    { value: "dashboard", label: "Dashboard", icon: ShieldCheck, action: () => router.push('/') },
+    { value: "dashboard", label: "Dashboard", icon: LayoutDashboard, action: () => router.push('/dashboard') },
     { value: "sign-out", label: "Sign Out", icon: ShieldX, action: signOutUser }
   ];
 
@@ -151,7 +150,7 @@ export default function UserManagementPage() {
                     onClick={() => openEditRoleDialog(user)}
                     className="text-primary hover:text-primary/80 px-2"
                     title={`Edit role for ${user.email}`}
-                    disabled={user.uid === currentUser?.uid && user.role === 'Creator'} // Prevent creator from demoting themselves easily
+                    disabled={user.uid === currentUser?.uid && user.role === 'Creator'} 
                   >
                     <Edit className="h-5 w-5" />
                     <span className="sr-only">Editar rol</span>
@@ -168,14 +167,15 @@ export default function UserManagementPage() {
   return (
      <div className="flex flex-col min-h-screen bg-background">
         <AppHeader
-            activeTab="user-management" // Or a unique identifier for this page
-            onTabChange={(value) => {
+            activeTab="user-management" 
+            navItemsForMenu={navItemsForMenu.map(i => ({value: i.value, label: i.label, icon: i.icon}))}
+            onTabChange={(value) => { // Simplified for this page as it doesn't have internal tabs
               const item = navItemsForMenu.find(nav => nav.value === value);
               item?.action?.();
             }}
-            navItemsForMenu={navItemsForMenu.map(i => ({value: i.value, label: i.label, icon: i.icon}))}
             onSignOut={signOutUser}
-            showUserManagementButton={false} // Already on user management page
+            showUserManagementButton={false} 
+            showDashboardButton={true}
         />
       <main className="flex-grow container mx-auto py-8 px-4">
         <Card>
@@ -184,7 +184,7 @@ export default function UserManagementPage() {
               <UsersIcon className="h-7 w-7 text-primary" />
               <CardTitle>Gestión de usuarios</CardTitle>
             </div>
-          </CardHeader>
+          </Header>
           <CardContent>{content}</CardContent>
         </Card>
       </main>

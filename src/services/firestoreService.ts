@@ -1,13 +1,42 @@
 
-import { collection, getDocs, Timestamp, query, orderBy, addDoc, doc, updateDoc, runTransaction, writeBatch, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, Timestamp, query, orderBy, addDoc, doc, updateDoc, runTransaction, writeBatch, setDoc, deleteDoc, getDoc, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { TeamStats, MatchInfo, NewMatchInput, UserRole, UserProfile } from '@/types';
+import type { TeamStats, MatchInfo, NewMatchInput, UserRole, UserProfile, League } from '@/types';
 import { parseISO } from 'date-fns';
 
-export async function getTeams(): Promise<TeamStats[]> {
+// LEAGUE FUNCTIONS
+export async function addLeague(name: string): Promise<string> {
+  const leaguesCol = collection(db, 'leagues');
+  const newLeagueRef = doc(leaguesCol);
+  const newLeagueData = {
+    id: newLeagueRef.id,
+    name: name,
+    createdAt: serverTimestamp(), // Use server timestamp
+  };
+  await setDoc(newLeagueRef, newLeagueData);
+  return newLeagueRef.id;
+}
+
+export async function getLeagues(): Promise<League[]> {
+  const leaguesCol = collection(db, 'leagues');
+  const q = query(leaguesCol, orderBy('name', 'asc')); // Order by name
+  const leagueSnapshot = await getDocs(q);
+  return leagueSnapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      name: data.name,
+      createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(), // Handle case where createdAt might be pending
+    } as League;
+  });
+}
+
+// TEAM FUNCTIONS (TODO: Add leagueId filtering)
+export async function getTeams(leagueId?: string): Promise<TeamStats[]> {
   const teamsCol = collection(db, 'teams');
-  // Order by rank ascending by default
-  const q = query(teamsCol, orderBy('rank', 'asc'));
+  // Placeholder: In the future, this query will filter by leagueId if provided
+  // const q = leagueId ? query(teamsCol, where('leagueId', '==', leagueId), orderBy('rank', 'asc')) : query(teamsCol, orderBy('rank', 'asc'));
+  const q = query(teamsCol, orderBy('rank', 'asc')); // Current global fetch
   const teamSnapshot = await getDocs(q);
   const teamList = teamSnapshot.docs.map(doc => {
     const data = doc.data();
@@ -23,48 +52,31 @@ export async function getTeams(): Promise<TeamStats[]> {
       goalsConceded: data.goalsConceded,
       goalDifference: data.goalDifference,
       points: data.points,
+      leagueId: data.leagueId,
     } as TeamStats;
   });
   return teamList;
 }
 
-export async function getMatches(): Promise<MatchInfo[]> {
-  const matchesCol = collection(db, 'matches');
-  // Order by dateTime ascending
-  const q = query(matchesCol, orderBy('dateTime', 'asc'));
-  const matchSnapshot = await getDocs(q);
-  const matchList = matchSnapshot.docs.map(doc => {
-    const data = doc.data();
-    const dateTime = (data.dateTime as Timestamp).toDate();
-    return {
-      id: doc.id,
-      homeTeam: data.homeTeam,
-      awayTeam: data.awayTeam,
-      location: data.location,
-      dateTime: dateTime,
-      homeScore: data.homeScore, // May be undefined
-      awayScore: data.awayScore, // May be undefined
-    } as MatchInfo;
-  });
-  return matchList;
-}
-
-export async function addTeam(teamName: string): Promise<string> {
+export async function addTeam(teamName: string, leagueId: string): Promise<string> {
   const teamsCol = collection(db, 'teams');
   
   let newRank = 1;
   try {
     await runTransaction(db, async (transaction) => {
-      const teamSnapshot = await transaction.get(query(teamsCol)); 
+      // Placeholder: Future query will filter by leagueId
+      // const teamSnapshot = await transaction.get(query(teamsCol, where('leagueId', '==', leagueId)));
+      const teamSnapshot = await transaction.get(query(teamsCol));
       newRank = teamSnapshot.size + 1;
     });
   } catch (e) {
     console.error("Transaction failed to determine initial rank: ", e);
+    // const currentTeams = await getDocs(query(teamsCol, where('leagueId', '==', leagueId)));
     const currentTeams = await getDocs(query(teamsCol));
     newRank = currentTeams.size + 1;
   }
 
-  const newTeamData: Omit<TeamStats, 'id' | 'rank'> & { rank: number } = {
+  const newTeamData = {
     name: teamName,
     rank: newRank, 
     played: 0,
@@ -75,6 +87,7 @@ export async function addTeam(teamName: string): Promise<string> {
     goalsConceded: 0,
     goalDifference: 0,
     points: 0,
+    leagueId: leagueId, // Store leagueId
   };
 
   const docRef = await addDoc(teamsCol, newTeamData);
@@ -90,13 +103,14 @@ export type UpdateTeamStatsInput = {
   goalsConceded: number;
 };
 
-export async function updateTeamStats(teamId: string, stats: UpdateTeamStatsInput): Promise<void> {
+export async function updateTeamStats(teamId: string, stats: UpdateTeamStatsInput, leagueId?: string): Promise<void> {
+  // Placeholder: leagueId might be used for validation or specific logic in future
   const teamRef = doc(db, 'teams', teamId);
 
   const goalDifference = stats.goalsScored - stats.goalsConceded;
   const points = stats.won * 3 + stats.drawn * 1;
 
-  const updatedData: Partial<Omit<TeamStats, 'id' | 'name' | 'rank'>> & {goalDifference: number, points: number} = {
+  const updatedData: Partial<Omit<TeamStats, 'id' | 'name' | 'rank' | 'leagueId'>> & {goalDifference: number, points: number} = {
     played: stats.played,
     won: stats.won,
     drawn: stats.drawn,
@@ -110,9 +124,10 @@ export async function updateTeamStats(teamId: string, stats: UpdateTeamStatsInpu
   await updateDoc(teamRef, updatedData);
 }
 
-export async function updateAllTeamRanks(): Promise<void> {
-  const teamsCol = collection(db, 'teams');
-  const teamSnapshot = await getDocs(teamsCol);
+export async function updateAllTeamRanks(leagueId?: string): Promise<void> {
+  // Placeholder: Future query will filter by leagueId
+  // const q = leagueId ? query(collection(db, 'teams'), where('leagueId', '==', leagueId)) : collection(db, 'teams');
+  const teamSnapshot = await getDocs(collection(db, 'teams'));
   
   const teams = teamSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamStats));
 
@@ -135,15 +150,43 @@ export async function updateAllTeamRanks(): Promise<void> {
   await batch.commit();
 }
 
+
+// MATCH FUNCTIONS (TODO: Add leagueId filtering)
+export async function getMatches(leagueId?: string): Promise<MatchInfo[]> {
+  const matchesCol = collection(db, 'matches');
+  // Placeholder: In the future, this query will filter by leagueId if provided
+  // const q = leagueId ? query(matchesCol, where('leagueId', '==', leagueId), orderBy('dateTime', 'asc')) : query(matchesCol, orderBy('dateTime', 'asc'));
+  const q = query(matchesCol, orderBy('dateTime', 'asc')); // Current global fetch
+  const matchSnapshot = await getDocs(q);
+  const matchList = matchSnapshot.docs.map(doc => {
+    const data = doc.data();
+    const dateTime = (data.dateTime as Timestamp).toDate();
+    return {
+      id: doc.id,
+      homeTeam: data.homeTeam,
+      awayTeam: data.awayTeam,
+      location: data.location,
+      dateTime: dateTime,
+      homeScore: data.homeScore,
+      awayScore: data.awayScore,
+      leagueId: data.leagueId,
+    } as MatchInfo;
+  });
+  return matchList;
+}
+
 export async function addMatch(matchInput: NewMatchInput): Promise<string> {
   const matchesCol = collection(db, 'matches');
-  const newMatchRef = doc(matchesCol); // Create a new document reference with an auto-generated ID
+  const newMatchRef = doc(matchesCol);
   const newId = newMatchRef.id; 
 
-  const { date, time, ...restOfMatchInput } = matchInput;
+  const { date, time, leagueId, ...restOfMatchInput } = matchInput;
   
   if (!date || !time) {
     throw new Error("Date and time are required to create a match.");
+  }
+  if (!leagueId) {
+    throw new Error("League ID is required to create a match.");
   }
   
   const dateTimeString = `${date}T${time}:00`; 
@@ -154,17 +197,18 @@ export async function addMatch(matchInput: NewMatchInput): Promise<string> {
   }
 
   const newMatchData = {
-    id: newId, // Explicitly include the generated ID in the document data
+    id: newId,
     ...restOfMatchInput,
+    leagueId: leagueId, // Store leagueId
     dateTime: Timestamp.fromDate(matchDateTime),
-    // homeScore and awayScore will be undefined initially
   };
 
-  await setDoc(newMatchRef, newMatchData); // Use setDoc with the new reference
-  return newId; // Return the generated ID
+  await setDoc(newMatchRef, newMatchData);
+  return newId;
 }
 
-export async function updateMatchScore(matchId: string, homeScore: number, awayScore: number): Promise<void> {
+export async function updateMatchScore(matchId: string, homeScore: number, awayScore: number, leagueId?: string): Promise<void> {
+  // Placeholder: leagueId for future validation
   if (matchId === undefined || homeScore === undefined || awayScore === undefined) {
     throw new Error("Match ID and scores must be provided.");
   }
@@ -184,7 +228,8 @@ export async function updateMatchScore(matchId: string, homeScore: number, awayS
   }
 }
 
-export async function deleteMatch(matchId: string): Promise<void> {
+export async function deleteMatch(matchId: string, leagueId?: string): Promise<void> {
+  // Placeholder: leagueId for future validation
   if (!matchId) {
     throw new Error("Match ID must be provided to delete a match.");
   }
@@ -197,6 +242,8 @@ export async function deleteMatch(matchId: string): Promise<void> {
   }
 }
 
+
+// USER FUNCTIONS
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);

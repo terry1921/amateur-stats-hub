@@ -20,7 +20,7 @@ import type { UserRole, UserProfile } from '@/types';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
-  userProfile: UserProfile | null; // Changed from userRole to full profile
+  userProfile: UserProfile | null; 
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signUpWithEmail: (email: string, pass: string, displayName: string) => Promise<FirebaseUser | null>;
@@ -46,12 +46,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setCurrentUser(firebaseUser);
         let profile = await getUserProfile(firebaseUser.uid);
         if (!profile) {
-          // If profile doesn't exist, create one with default role "Viewer"
           profile = await createUserProfile(
             firebaseUser.uid,
             firebaseUser.email,
-            firebaseUser.displayName, // This will be picked up after updateProfile
-            'Viewer' // Default role
+            firebaseUser.displayName, 
+            'Viewer' 
           );
         }
         setUserProfile(profile);
@@ -65,8 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const handleAuthSuccess = (user: FirebaseUser) => {
-    // onAuthStateChanged will handle profile fetching/creation
-    router.push('/');
+    router.push('/dashboard'); // Redirect to dashboard
   };
 
   const signInWithGoogle = async () => {
@@ -75,8 +73,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const result = await signInWithPopup(auth, provider);
       if (result.user) {
-        // For Google Sign-In, displayName is usually set by Google.
-        // The onAuthStateChanged listener will handle profile creation/fetching.
         handleAuthSuccess(result.user);
       }
     } catch (error) {
@@ -91,13 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const user = userCredential.user;
-      // Update Firebase Auth profile with displayName
       await updateProfile(user, { displayName });
-      // setCurrentUser explicitly here to ensure firebaseUser.displayName is available for createUserProfile in onAuthStateChanged
-      // although onAuthStateChanged should pick it up, this makes it more robust for immediate profile creation.
-      // However, the onAuthStateChanged listener is the primary handler for profile creation.
-      // Forcing a refresh or re-fetch within onAuthStateChanged might be needed if timing is an issue.
-      // For now, relying on onAuthStateChanged after updateProfile.
       handleAuthSuccess(user);
       return user;
     } catch (error) {
