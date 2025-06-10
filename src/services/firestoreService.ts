@@ -1,5 +1,5 @@
 
-import { collection, getDocs, Timestamp, query, orderBy, addDoc, doc, updateDoc, runTransaction, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, Timestamp, query, orderBy, addDoc, doc, updateDoc, runTransaction, writeBatch, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { TeamStats, MatchInfo, NewMatchInput } from '@/types';
 import { parseISO } from 'date-fns';
@@ -143,6 +143,10 @@ export async function updateAllTeamRanks(): Promise<void> {
 export async function addMatch(matchInput: NewMatchInput): Promise<string> {
   const matchesCol = collection(db, 'matches');
   
+  // Generate a new DocumentReference with an auto-generated ID
+  const newMatchRef = doc(matchesCol);
+  const newId = newMatchRef.id; // This is the random string ID
+
   const { date, time, ...restOfMatchInput } = matchInput;
   
   // Combine date and time strings and parse into a JavaScript Date object
@@ -164,6 +168,9 @@ export async function addMatch(matchInput: NewMatchInput): Promise<string> {
     // homeScore and awayScore will be undefined initially for an upcoming match
   };
 
-  const docRef = await addDoc(matchesCol, newMatchData);
-  return docRef.id;
+  // Use setDoc with the DocumentReference that has the auto-generated ID
+  await setDoc(newMatchRef, newMatchData);
+  
+  return newId; // Return the generated ID
 }
+
