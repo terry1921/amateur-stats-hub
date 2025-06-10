@@ -26,20 +26,20 @@ export function MatchCard({ match, onEditMatch, onDeleteMatch }: MatchCardProps)
               size="icon" 
               onClick={() => onEditMatch(match)} 
               className="h-7 w-7 text-muted-foreground hover:text-accent"
-              title="Edit Score"
+              title="Editar Marcador"
             >
               <Pencil className="h-4 w-4" />
-              <span className="sr-only">Edit Score</span>
+              <span className="sr-only">Editar Marcador</span>
             </Button>
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={() => onDeleteMatch(match.id)} 
               className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              title="Delete Match"
+              title="Eliminar Partido"
             >
               <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Delete Match</span>
+              <span className="sr-only">Eliminar Partido</span>
             </Button>
           </div>
         </div>

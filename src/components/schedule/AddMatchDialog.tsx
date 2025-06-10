@@ -44,6 +44,13 @@ const addMatchSchema = z.object({
   path: ["awayTeam"],
 });
 
+const TEAMS_CACHE_KEY = 'matchDialog_teamsCache';
+const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+interface CachedTeams {
+  timestamp: number;
+  data: TeamStats[];
+}
 
 export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,9 +77,37 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
       if (isOpen) {
         setIsLoadingTeams(true);
         setFetchTeamsError(null);
+
+        // Try to load from cache
+        try {
+          const cachedItem = localStorage.getItem(TEAMS_CACHE_KEY);
+          if (cachedItem) {
+            const parsedCache: CachedTeams = JSON.parse(cachedItem);
+            if (Date.now() - parsedCache.timestamp < CACHE_DURATION_MS) {
+              setTeams(parsedCache.data.sort((a, b) => a.name.localeCompare(b.name)));
+              setIsLoadingTeams(false);
+              return; // Use cached data
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to load or parse teams from cache:", e);
+          // Proceed to fetch from Firestore if cache is invalid or error occurs
+        }
+        
+        // Fetch from Firestore if cache is not available or expired
         try {
           const fetchedTeams = await getTeams();
-          setTeams(fetchedTeams.sort((a, b) => a.name.localeCompare(b.name))); // Sort teams alphabetically
+          const sortedTeams = fetchedTeams.sort((a, b) => a.name.localeCompare(b.name));
+          setTeams(sortedTeams);
+          
+          // Save to cache
+          try {
+            const newCache: CachedTeams = { timestamp: Date.now(), data: sortedTeams };
+            localStorage.setItem(TEAMS_CACHE_KEY, JSON.stringify(newCache));
+          } catch (e) {
+            console.warn("Failed to save teams to cache:", e);
+          }
+
         } catch (err) {
           console.error("Error fetching teams for dialog:", err);
           setFetchTeamsError("Failed to load teams. Please try again.");
@@ -89,8 +124,6 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
       form.reset();
       setSubmitError(null);
       setIsSubmitting(false);
-      // Optionally clear teams if they should always refetch, or keep them for faster reopening
-      // setTeams([]); 
     }
   }, [isOpen, form]);
 
@@ -144,7 +177,7 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Equipo Local</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting || isLoadingTeams}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting || isLoadingTeams}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={isLoadingTeams ? "Loading teams..." : "Seleccione un equipo local"} />
@@ -170,7 +203,7 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Equipo Visitante</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting || isLoadingTeams}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting || isLoadingTeams}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={isLoadingTeams ? "Loading teams..." : "Seleccione un equipo visitante"} />
@@ -275,7 +308,7 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Adding Match...
+                    Agregando Partido...
                   </>
                 ) : (
                   'Add Match'
@@ -288,3 +321,4 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
     </Dialog>
   );
 }
+
