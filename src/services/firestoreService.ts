@@ -1,5 +1,5 @@
 
-import { collection, getDocs, Timestamp, query, orderBy, addDoc } from 'firebase/firestore';
+import { collection, getDocs, Timestamp, query, orderBy, addDoc, doc, updateDoc, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { TeamStats, MatchInfo } from '@/types';
 
@@ -51,13 +51,22 @@ export async function getMatches(): Promise<MatchInfo[]> {
 export async function addTeam(teamName: string): Promise<string> {
   const teamsCol = collection(db, 'teams');
   
-  // Get current number of teams to determine rank
-  const teamSnapshot = await getDocs(teamsCol);
-  const currentTeamCount = teamSnapshot.size;
+  // Get current number of teams to determine rank in a transaction for consistency
+  let newRank = 1;
+  try {
+    await runTransaction(db, async (transaction) => {
+      const teamSnapshot = await transaction.get(query(teamsCol)); // Get all teams to count
+      newRank = teamSnapshot.size + 1;
+    });
+  } catch (e) {
+    console.error("Transaction failed: ", e);
+    throw new Error("Failed to determine team rank due to a database error.");
+  }
 
-  const newTeamData: Omit<TeamStats, 'id'> = {
+
+  const newTeamData: Omit<TeamStats, 'id' | 'rank'> & { rank: number } = {
     name: teamName,
-    rank: currentTeamCount + 1, // New teams start at the bottom
+    rank: newRank, 
     played: 0,
     won: 0,
     drawn: 0,
@@ -69,5 +78,31 @@ export async function addTeam(teamName: string): Promise<string> {
   };
 
   const docRef = await addDoc(teamsCol, newTeamData);
-  return docRef.id; // Return the ID of the newly created document
+  return docRef.id; 
+}
+
+export type UpdateTeamStatsInput = {
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsScored: number;
+  goalsConceded: number;
+};
+
+export async function updateTeamStats(teamId: string, stats: UpdateTeamStatsInput): Promise<void> {
+  const teamRef = doc(db, 'teams', teamId);
+
+  const goalDifference = stats.goalsScored - stats.goalsConceded;
+  const points = stats.won * 3 + stats.drawn * 1;
+
+  const updatedData: Partial<TeamStats> = {
+    ...stats,
+    goalDifference,
+    points,
+  };
+
+  // Note: This function does not automatically update ranks.
+  // Rank updates would require re-evaluating all teams and are a more complex operation.
+  await updateDoc(teamRef, updatedData);
 }

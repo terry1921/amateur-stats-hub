@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Table,
   TableHeader,
@@ -12,9 +12,10 @@ import {
   TableCaption,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, BrainCircuit, ArrowUp, ArrowDown, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowUpDown, BrainCircuit, ArrowUp, ArrowDown, Loader2, AlertTriangle, Pencil } from 'lucide-react';
 import type { TeamStats } from '@/types';
 import { TeamPerformanceDialog } from './TeamPerformanceDialog';
+import { UpdateTeamStatsDialog } from './UpdateTeamStatsDialog'; // New Dialog
 import { getTeams } from '@/services/firestoreService';
 
 type SortKey = keyof TeamStats | null;
@@ -37,27 +38,33 @@ export function LeagueTable() {
   const [teamsData, setTeamsData] = useState<TeamStats[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [selectedTeam, setSelectedTeam] = useState<TeamStats | null>(null);
+  
+  const [selectedTeamForAnalysis, setSelectedTeamForAnalysis] = useState<TeamStats | null>(null);
   const [isAnalysisDialogOpen, setIsAnalysisDialogOpen] = useState(false);
+  
+  const [selectedTeamForUpdate, setSelectedTeamForUpdate] = useState<TeamStats | null>(null);
+  const [isUpdateStatsDialogOpen, setIsUpdateStatsDialogOpen] = useState(false);
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchTeams() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const teams = await getTeams();
-        setTeamsData(teams);
-      } catch (err) {
-        console.error("Error fetching teams:", err);
-        setError("Failed to load league table. Please try again later.");
-      } finally {
-        setIsLoading(false);
-      }
+  const fetchTeamsData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const teams = await getTeams();
+      setTeamsData(teams);
+    } catch (err) {
+      console.error("Error fetching teams:", err);
+      setError("Failed to load league table. Please try again later.");
+    } finally {
+      setIsLoading(false);
     }
-    fetchTeams();
   }, []);
+
+  useEffect(() => {
+    fetchTeamsData();
+  }, [fetchTeamsData]);
 
   const sortedTeams = useMemo(() => {
     if (!sortKey) return teamsData;
@@ -86,13 +93,27 @@ export function LeagueTable() {
   };
 
   const openAnalysisDialog = (team: TeamStats) => {
-    setSelectedTeam(team);
+    setSelectedTeamForAnalysis(team);
     setIsAnalysisDialogOpen(true);
   };
 
   const closeAnalysisDialog = () => {
     setIsAnalysisDialogOpen(false);
-    setSelectedTeam(null);
+    setSelectedTeamForAnalysis(null);
+  };
+
+  const openUpdateStatsDialog = (team: TeamStats) => {
+    setSelectedTeamForUpdate(team);
+    setIsUpdateStatsDialogOpen(true);
+  };
+
+  const closeUpdateStatsDialog = () => {
+    setIsUpdateStatsDialogOpen(false);
+    setSelectedTeamForUpdate(null);
+  };
+
+  const handleTeamStatsUpdated = () => {
+    fetchTeamsData(); // Re-fetch data when stats are updated
   };
   
   const SortIcon = ({ columnKey }: { columnKey: keyof TeamStats }) => {
@@ -128,13 +149,13 @@ export function LeagueTable() {
         </CardHeader>
         <CardContent>
           <Table>
-            <TableCaption>Official league standings. Click headers to sort.</TableCaption>
+            <TableCaption>Official league standings. Click headers to sort. Use actions to analyze or edit team stats.</TableCaption>
             <TableHeader>
               <TableRow>
                 {columns.map((col) => (
                   <TableHead 
                     key={col.key} 
-                    onClick={() => col.key !== 'name' && handleSort(col.key)} // Allow sorting on all but name for now
+                    onClick={() => col.key !== 'name' && handleSort(col.key)} 
                     className={`cursor-pointer hover:bg-muted/50 ${col.numeric ? 'text-right' : 'text-left'}`}
                     title={`Sort by ${col.label}`}
                   >
@@ -156,16 +177,26 @@ export function LeagueTable() {
                       {team[col.key]}
                     </TableCell>
                   ))}
-                  <TableCell className="text-center">
+                  <TableCell className="text-center space-x-1">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => openAnalysisDialog(team)}
-                      className="text-primary hover:text-primary/80"
+                      className="text-primary hover:text-primary/80 px-2"
                       title={`Analyze ${team.name}'s performance`}
                     >
                       <BrainCircuit className="h-5 w-5" />
-                      <span className="sr-only sm:not-sr-only sm:ml-2">Analyze</span>
+                      <span className="sr-only">Analyze</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openUpdateStatsDialog(team)}
+                      className="text-accent hover:text-accent/80 px-2"
+                      title={`Edit ${team.name}'s stats`}
+                    >
+                      <Pencil className="h-5 w-5" />
+                      <span className="sr-only">Edit Stats</span>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -175,9 +206,15 @@ export function LeagueTable() {
         </CardContent>
       </Card>
       <TeamPerformanceDialog
-        team={selectedTeam}
+        team={selectedTeamForAnalysis}
         isOpen={isAnalysisDialogOpen}
         onClose={closeAnalysisDialog}
+      />
+      <UpdateTeamStatsDialog
+        team={selectedTeamForUpdate}
+        isOpen={isUpdateStatsDialogOpen}
+        onClose={closeUpdateStatsDialog}
+        onTeamUpdate={handleTeamStatsUpdated}
       />
     </>
   );
