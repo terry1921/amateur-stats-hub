@@ -7,12 +7,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Label } from '@/components/ui/label'; // Keep if used, but FormLabel is typical with react-hook-form
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; // Keep if outer card is still needed
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { addTeam } from '@/services/firestoreService';
 import { Loader2, AlertTriangle } from 'lucide-react';
+import { DialogFooter, DialogClose } from '@/components/ui/dialog'; // For cancel button
 
 const formSchema = z.object({
   teamName: z
@@ -21,7 +22,12 @@ const formSchema = z.object({
     .max(50, { message: 'Team name must not exceed 50 characters.' }),
 });
 
-export function RegisterTeamForm() {
+interface RegisterTeamFormProps {
+  onTeamRegistered?: () => void;
+  onCloseDialog?: () => void;
+}
+
+export function RegisterTeamForm({ onTeamRegistered, onCloseDialog }: RegisterTeamFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -37,14 +43,14 @@ export function RegisterTeamForm() {
     setIsSubmitting(true);
     setError(null);
     try {
-      const newTeamId = await addTeam(values.teamName);
+      await addTeam(values.teamName);
       toast({
         title: 'Team Registered!',
         description: `${values.teamName} has been successfully registered.`,
       });
       form.reset();
-      // Optionally, you might want to trigger a re-fetch of the league table data here
-      // or navigate the user, or provide more prominent success feedback.
+      onTeamRegistered?.(); 
+      onCloseDialog?.(); // Close the dialog after successful registration
     } catch (err) {
       console.error('Error registering team:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
@@ -59,15 +65,19 @@ export function RegisterTeamForm() {
     }
   }
 
+  // If the form is intended to be used outside a Card when in a dialog,
+  // you might remove the Card, CardHeader, CardContent structure from here.
+  // For now, I'm keeping it assuming it might be styled with a Card aesthetic even in a dialog.
+  // If the Dialog provides its own title (which it does from LeagueTable), CardTitle/Description here might be redundant.
   return (
-    <Card className="w-full max-w-lg mx-auto shadow-lg">
-      <CardHeader>
-        <CardTitle className="font-headline text-2xl">Register New Team</CardTitle>
-        <CardDescription>Enter the name of the new team to add them to the league.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    // <Card className="w-full max-w-lg mx-auto shadow-lg"> remove if dialog provides chrome
+    //   <CardHeader>
+    //     <CardTitle className="font-headline text-2xl">Register New Team</CardTitle>
+    //     <CardDescription>Enter the name of the new team to add them to the league.</CardDescription>
+    //   </CardHeader>
+    //   <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
             <FormField
               control={form.control}
               name="teamName"
@@ -88,20 +98,25 @@ export function RegisterTeamForm() {
                 <span>{error}</span>
               </div>
             )}
-
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Registering...
-                </>
-              ) : (
-                'Register Team'
-              )}
-            </Button>
+            
+            <DialogFooter className="pt-4">
+              <DialogClose asChild>
+                <Button type="button" variant="outline" onClick={onCloseDialog} disabled={isSubmitting}>Cancel</Button>
+              </DialogClose>
+              <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Registering...
+                  </>
+                ) : (
+                  'Register Team'
+                )}
+              </Button>
+            </DialogFooter>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+    //   </CardContent>
+    // </Card>
   );
 }

@@ -14,10 +14,18 @@ import {
   TableCaption,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, BrainCircuit, ArrowUp, ArrowDown, Loader2, AlertTriangle, Pencil, BarChartHorizontalBig, Printer } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { ArrowUpDown, BrainCircuit, ArrowUp, ArrowDown, Loader2, AlertTriangle, Pencil, BarChartHorizontalBig, Printer, PlusSquare } from 'lucide-react';
 import type { TeamStats } from '@/types';
 import { TeamPerformanceDialog } from './TeamPerformanceDialog';
 import { UpdateTeamStatsDialog } from './UpdateTeamStatsDialog';
+import { RegisterTeamForm } from '@/components/team/RegisterTeamForm';
 import { getTeams, updateAllTeamRanks } from '@/services/firestoreService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -47,6 +55,8 @@ export function LeagueTable() {
   
   const [selectedTeamForUpdate, setSelectedTeamForUpdate] = useState<TeamStats | null>(null);
   const [isUpdateStatsDialogOpen, setIsUpdateStatsDialogOpen] = useState(false);
+
+  const [isRegisterTeamDialogOpen, setIsRegisterTeamDialogOpen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +130,11 @@ export function LeagueTable() {
 
   const handleTeamStatsUpdated = () => {
     fetchTeamsData(); 
+  };
+
+  const handleTeamRegistered = () => {
+    fetchTeamsData();
+    setIsRegisterTeamDialogOpen(false); // Close dialog on successful registration
   };
 
   const handleUpdateRanks = async () => {
@@ -196,6 +211,28 @@ export function LeagueTable() {
         <CardHeader className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <CardTitle className="font-headline text-xl sm:text-2xl">Tabla de Posiciones</CardTitle>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto no-print-header-actions">
+            <Dialog open={isRegisterTeamDialogOpen} onOpenChange={setIsRegisterTeamDialogOpen}>
+              <DialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  disabled={isLoading || isUpdatingRanks}
+                >
+                  <PlusSquare className="h-4 w-4" />
+                  <span className="ml-2">Registrar Equipo</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="font-headline text-2xl">Register New Team</DialogTitle>
+                </DialogHeader>
+                <RegisterTeamForm 
+                  onTeamRegistered={handleTeamRegistered} 
+                  onCloseDialog={() => setIsRegisterTeamDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
             <Button 
               onClick={handleUpdateRanks} 
               disabled={isUpdatingRanks || isLoading} 
@@ -303,6 +340,8 @@ export function LeagueTable() {
   );
 }
 
+// Re-declare Card components locally as they are used in this file only after main /ui/card was removed.
+// This keeps the component self-contained for this specific usage.
 const Card = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={`rounded-lg border bg-card text-card-foreground ${className}`} {...props} />
 );

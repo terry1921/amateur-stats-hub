@@ -3,8 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppHeader } from "@/components/layout/Header";
 import { LeagueTable } from "@/components/league/LeagueTable";
 import { MatchSchedule } from "@/components/schedule/MatchSchedule";
-import { RegisterTeamForm } from "@/components/team/RegisterTeamForm";
-import { ListOrdered, CalendarDays, PlusSquare } from "lucide-react";
+import { ListOrdered, CalendarDays } from "lucide-react";
 
 export default function Home() {
   return (
@@ -21,19 +20,12 @@ export default function Home() {
               <CalendarDays className="h-5 w-5 mr-2" />
               Calendario
             </TabsTrigger>
-            <TabsTrigger value="register-team" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <PlusSquare className="h-5 w-5 mr-2" />
-              Registrar Equipo
-            </TabsTrigger>
           </TabsList>
           <TabsContent value="league-table">
             <LeagueTable />
           </TabsContent>
           <TabsContent value="match-schedule">
             <MatchSchedule />
-          </TabsContent>
-          <TabsContent value="register-team">
-            <RegisterTeamForm />
           </TabsContent>
         </Tabs>
       </main>
