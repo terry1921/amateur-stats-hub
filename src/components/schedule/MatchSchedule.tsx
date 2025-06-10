@@ -1,11 +1,13 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { MatchInfo } from '@/types';
 import { MatchCard } from './MatchCard';
 import { getMatches } from '@/services/firestoreService';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, PlusSquare } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AddMatchDialog } from './AddMatchDialog'; // Import the new dialog
 
 // Re-declare Card components for smaller file as per original structure
 const Card = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -26,31 +28,35 @@ export function MatchSchedule() {
   const [matches, setMatches] = useState<MatchInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAddMatchDialogOpen, setIsAddMatchDialogOpen] = useState(false);
 
-  useEffect(() => {
-    async function fetchMatches() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const fetchedMatches = await getMatches();
-        setMatches(fetchedMatches);
-      } catch (err) {
-        console.error("Error fetching matches:", err);
-        setError("Failed to load match schedule. Please try again later.");
-      } finally {
-        setIsLoading(false);
-      }
+  const fetchMatches = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const fetchedMatches = await getMatches();
+      setMatches(fetchedMatches);
+    } catch (err) {
+      console.error("Error fetching matches:", err);
+      setError("Failed to load match schedule. Please try again later.");
+    } finally {
+      setIsLoading(false);
     }
-    fetchMatches();
   }, []);
 
+  useEffect(() => {
+    fetchMatches();
+  }, [fetchMatches]);
+
   const upcomingMatches = useMemo(() => {
-    const now = new Date(); // Define 'now' here to avoid re-calculation on every comparison
+    const now = new Date(); 
     return matches
       .filter(match => match.dateTime >= now)
-      // Already sorted by date from Firestore service, but can re-sort if needed
-      // .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime()); 
   }, [matches]);
+
+  const handleMatchAdded = () => {
+    fetchMatches(); // Refresh the list of matches
+  };
 
   if (isLoading) {
     return (
@@ -71,21 +77,39 @@ export function MatchSchedule() {
   }
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader>
-        <CardTitle className="font-headline text-2xl">Upcoming Matches</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {upcomingMatches.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {upcomingMatches.map((match) => (
-              <MatchCard key={match.id} match={match} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-center py-8">No upcoming matches scheduled.</p>
-        )}
-      </CardContent>
-    </Card>
+    <>
+      <Card className="shadow-lg">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="font-headline text-2xl">Upcoming Matches</CardTitle>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setIsAddMatchDialogOpen(true)}
+            className="no-print-header-actions"
+            disabled={isLoading}
+          >
+            <PlusSquare className="h-4 w-4" />
+            <span className="ml-2 hidden sm:inline">Add Match</span>
+            <span className="ml-2 sm:hidden">Add</span>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {upcomingMatches.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {upcomingMatches.map((match) => (
+                <MatchCard key={match.id} match={match} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">No upcoming matches scheduled.</p>
+          )}
+        </CardContent>
+      </Card>
+      <AddMatchDialog
+        isOpen={isAddMatchDialogOpen}
+        onClose={() => setIsAddMatchDialogOpen(false)}
+        onMatchAdded={handleMatchAdded}
+      />
+    </>
   );
 }

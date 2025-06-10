@@ -21,3 +21,13 @@ export type MatchInfo = {
   homeScore?: number; // Optional, for past matches
   awayScore?: number; // Optional, for past matches
 };
+
+// Input type for adding a new match, before it has an ID from Firestore
+// and dateTime is initially a string from form input.
+export type NewMatchInput = {
+  homeTeam: string;
+  awayTeam: string;
+  location: string;
+  date: string; // Date as string (YYYY-MM-DD)
+  time: string; // Time as string (HH:MM)
+};

@@ -1,7 +1,8 @@
 
 import { collection, getDocs, Timestamp, query, orderBy, addDoc, doc, updateDoc, runTransaction, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { TeamStats, MatchInfo } from '@/types';
+import type { TeamStats, MatchInfo, NewMatchInput } from '@/types';
+import { parseISO } from 'date-fns';
 
 export async function getTeams(): Promise<TeamStats[]> {
   const teamsCol = collection(db, 'teams');
@@ -127,7 +128,6 @@ export async function updateAllTeamRanks(): Promise<void> {
     if (b.goalDifference !== a.goalDifference) {
       return b.goalDifference - a.goalDifference;
     }
-    // Optional: if points and GD are same, sort by name for stable ranking (not strictly required by prompt)
     return a.name.localeCompare(b.name); 
   });
 
@@ -138,4 +138,32 @@ export async function updateAllTeamRanks(): Promise<void> {
   });
 
   await batch.commit();
+}
+
+export async function addMatch(matchInput: NewMatchInput): Promise<string> {
+  const matchesCol = collection(db, 'matches');
+  
+  const { date, time, ...restOfMatchInput } = matchInput;
+  
+  // Combine date and time strings and parse into a JavaScript Date object
+  // Ensure date and time are valid before attempting to parse
+  if (!date || !time) {
+    throw new Error("Date and time are required to create a match.");
+  }
+  
+  const dateTimeString = `${date}T${time}:00`; // Assuming time is HH:MM
+  const matchDateTime = parseISO(dateTimeString);
+
+  if (isNaN(matchDateTime.getTime())) {
+    throw new Error("Invalid date or time format provided.");
+  }
+
+  const newMatchData = {
+    ...restOfMatchInput,
+    dateTime: Timestamp.fromDate(matchDateTime),
+    // homeScore and awayScore will be undefined initially for an upcoming match
+  };
+
+  const docRef = await addDoc(matchesCol, newMatchData);
+  return docRef.id;
 }
