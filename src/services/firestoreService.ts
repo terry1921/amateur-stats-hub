@@ -1,7 +1,7 @@
 
-import { collection, getDocs, Timestamp, query, orderBy, addDoc, doc, updateDoc, runTransaction, writeBatch, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, Timestamp, query, orderBy, addDoc, doc, updateDoc, runTransaction, writeBatch, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { TeamStats, MatchInfo, NewMatchInput } from '@/types';
+import type { TeamStats, MatchInfo, NewMatchInput, UserRole, UserProfile } from '@/types';
 import { parseISO } from 'date-fns';
 
 export async function getTeams(): Promise<TeamStats[]> {
@@ -54,19 +54,15 @@ export async function addTeam(teamName: string): Promise<string> {
   
   let newRank = 1;
   try {
-    // This transaction is simple and might not be strictly necessary if eventual consistency for rank is okay on add.
-    // The main "Update Ranks" button will be the source of truth for correct ranking.
     await runTransaction(db, async (transaction) => {
       const teamSnapshot = await transaction.get(query(teamsCol)); 
       newRank = teamSnapshot.size + 1;
     });
   } catch (e) {
     console.error("Transaction failed to determine initial rank: ", e);
-    // Fallback or rethrow, here we just use a potentially less accurate count if transaction fails
     const currentTeams = await getDocs(query(teamsCol));
     newRank = currentTeams.size + 1;
   }
-
 
   const newTeamData: Omit<TeamStats, 'id' | 'rank'> & { rank: number } = {
     name: teamName,
@@ -120,7 +116,6 @@ export async function updateAllTeamRanks(): Promise<void> {
   
   const teams = teamSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamStats));
 
-  // Sort teams: 1. by points (desc), 2. by goal difference (desc)
   teams.sort((a, b) => {
     if (b.points !== a.points) {
       return b.points - a.points;
@@ -142,20 +137,16 @@ export async function updateAllTeamRanks(): Promise<void> {
 
 export async function addMatch(matchInput: NewMatchInput): Promise<string> {
   const matchesCol = collection(db, 'matches');
-  
-  // Generate a new DocumentReference with an auto-generated ID
-  const newMatchRef = doc(matchesCol);
-  const newId = newMatchRef.id; // This is the random string ID
+  const newMatchRef = doc(matchesCol); // Create a new document reference with an auto-generated ID
+  const newId = newMatchRef.id; 
 
   const { date, time, ...restOfMatchInput } = matchInput;
   
-  // Combine date and time strings and parse into a JavaScript Date object
-  // Ensure date and time are valid before attempting to parse
   if (!date || !time) {
     throw new Error("Date and time are required to create a match.");
   }
   
-  const dateTimeString = `${date}T${time}:00`; // Assuming time is HH:MM
+  const dateTimeString = `${date}T${time}:00`; 
   const matchDateTime = parseISO(dateTimeString);
 
   if (isNaN(matchDateTime.getTime())) {
@@ -163,14 +154,13 @@ export async function addMatch(matchInput: NewMatchInput): Promise<string> {
   }
 
   const newMatchData = {
+    id: newId, // Explicitly include the generated ID in the document data
     ...restOfMatchInput,
     dateTime: Timestamp.fromDate(matchDateTime),
-    // homeScore and awayScore will be undefined initially for an upcoming match
+    // homeScore and awayScore will be undefined initially
   };
 
-  // Use setDoc with the DocumentReference that has the auto-generated ID
-  await setDoc(newMatchRef, newMatchData);
-  
+  await setDoc(newMatchRef, newMatchData); // Use setDoc with the new reference
   return newId; // Return the generated ID
 }
 
@@ -205,4 +195,67 @@ export async function deleteMatch(matchId: string): Promise<void> {
     console.error("Error deleting match from Firestore: ", error);
     throw new Error("Could not delete match from database.");
   }
+}
+
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  const userRef = doc(db, 'users', uid);
+  const userSnap = await getDoc(userRef);
+
+  if (userSnap.exists()) {
+    const data = userSnap.data();
+    return {
+      uid: userSnap.id,
+      email: data.email,
+      displayName: data.displayName,
+      role: data.role as UserRole,
+      createdAt: (data.createdAt as Timestamp).toDate(),
+      updatedAt: (data.updatedAt as Timestamp).toDate(),
+    } as UserProfile;
+  } else {
+    return null;
+  }
+}
+
+export async function createUserProfile(
+  uid: string,
+  email: string | null,
+  displayName: string | null,
+  role: UserRole
+): Promise<UserProfile> {
+  const userRef = doc(db, 'users', uid);
+  const now = new Date();
+  const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'updatedAt'> & {createdAt: Timestamp, updatedAt: Timestamp } = {
+    email,
+    displayName,
+    role,
+    createdAt: Timestamp.fromDate(now),
+    updatedAt: Timestamp.fromDate(now),
+  };
+  await setDoc(userRef, newUserProfile);
+  return { uid, ...newUserProfile, createdAt: now, updatedAt: now };
+}
+
+export async function getAllUsers(): Promise<UserProfile[]> {
+  const usersCol = collection(db, 'users');
+  const userSnapshot = await getDocs(usersCol);
+  const userList = userSnapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      uid: doc.id,
+      email: data.email,
+      displayName: data.displayName || 'N/A',
+      role: data.role as UserRole,
+      createdAt: (data.createdAt as Timestamp).toDate(),
+      updatedAt: (data.updatedAt as Timestamp).toDate(),
+    } as UserProfile;
+  });
+  return userList.sort((a,b) => (a.email || "").localeCompare(b.email || ""));
+}
+
+export async function updateUserRole(uid: string, newRole: UserRole): Promise<void> {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, {
+    role: newRole,
+    updatedAt: Timestamp.fromDate(new Date()),
+  });
 }

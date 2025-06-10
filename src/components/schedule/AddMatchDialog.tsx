@@ -34,8 +34,8 @@ interface AddMatchDialogProps {
 }
 
 const addMatchSchema = z.object({
-  homeTeam: z.string().min(1, "Home team is required."),
-  awayTeam: z.string().min(1, "Away team is required."),
+  homeTeam: z.string().min(1, "Equipo local es requerido."),
+  awayTeam: z.string().min(1, "Equipo visitante es requerido."),
   location: z.string().min(1, "Se requiere ubicación.").max(100, "Location name is too long."),
   date: z.date({ required_error: "La fecha del partido es obligatoria." }),
   time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)."),

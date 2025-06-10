@@ -1,3 +1,7 @@
+
+export const USER_ROLES = ['Creator', 'Viewer', 'Member', 'Administrator'] as const;
+export type UserRole = typeof USER_ROLES[number];
+
 export type TeamStats = {
   id: string;
   rank: number;
@@ -31,3 +35,12 @@ export type NewMatchInput = {
   date: string; // Date as string (YYYY-MM-DD)
   time: string; // Time as string (HH:MM)
 };
+
+export interface UserProfile {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  role: UserRole;
+  createdAt: Date; // Stored as Timestamp in Firestore, converted to Date in app
+  updatedAt: Date; // Stored as Timestamp in Firestore, converted to Date in app
+}
