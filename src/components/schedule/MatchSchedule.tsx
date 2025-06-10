@@ -156,7 +156,7 @@ export function MatchSchedule() {
       headStyles: { fillColor: [63, 81, 181] },
       styles: { font: 'PT Sans', fontSize: 9 },
     });
-    doc.text("Upcoming Matches - Amateur Stats Hub", 14, 15);
+    doc.text("Partidos por jugar - Amateur Stats Hub", 14, 15);
     doc.save('calendario-de-partidos.pdf');
   };
 
