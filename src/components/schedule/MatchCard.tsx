@@ -1,5 +1,5 @@
 
-import type { MatchInfo } from '@/types';
+import type { MatchInfo, UserRole } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CalendarClock, MapPin, Users, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -9,9 +9,13 @@ interface MatchCardProps {
   match: MatchInfo;
   onEditMatch: (match: MatchInfo) => void;
   onDeleteMatch: (matchId: string) => void;
+  userRole: UserRole | null | undefined;
 }
 
-export function MatchCard({ match, onEditMatch, onDeleteMatch }: MatchCardProps) {
+export function MatchCard({ match, onEditMatch, onDeleteMatch, userRole }: MatchCardProps) {
+  const canEditScore = userRole === 'Member' || userRole === 'Administrator' || userRole === 'Creator';
+  const canDeleteMatch = userRole === 'Administrator' || userRole === 'Creator';
+
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
       <CardHeader>
@@ -21,31 +25,35 @@ export function MatchCard({ match, onEditMatch, onDeleteMatch }: MatchCardProps)
           </CardTitle>
           <div className="flex items-center gap-1">
             <Users className="h-6 w-6 text-accent" />
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onEditMatch(match)} 
-              className="h-7 w-7 text-muted-foreground hover:text-accent"
-              title="Editar Marcador"
-            >
-              <Pencil className="h-4 w-4" />
-              <span className="sr-only">Editar Marcador</span>
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onDeleteMatch(match.id)} 
-              className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              title="Eliminar Partido"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Eliminar Partido</span>
-            </Button>
+            {canEditScore && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => onEditMatch(match)} 
+                className="h-7 w-7 text-muted-foreground hover:text-accent"
+                title="Editar Marcador"
+              >
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Editar Marcador</span>
+              </Button>
+            )}
+            {canDeleteMatch && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => onDeleteMatch(match.id)} 
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                title="Eliminar Partido"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">Eliminar Partido</span>
+              </Button>
+            )}
           </div>
         </div>
         <CardDescription>
           {match.homeScore !== undefined && match.awayScore !== undefined 
-            ? `Result: ${match.homeScore} - ${match.awayScore}`
+            ? `Resultado: ${match.homeScore} - ${match.awayScore}`
             : "Próximo partido"}
         </CardDescription>
       </CardHeader>
