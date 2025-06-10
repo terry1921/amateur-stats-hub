@@ -2,10 +2,13 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
 import type { MatchInfo } from '@/types';
 import { MatchCard } from './MatchCard';
 import { getMatches, deleteMatch } from '@/services/firestoreService';
-import { Loader2, AlertTriangle, PlusSquare, Trash2 } from 'lucide-react';
+import { Loader2, AlertTriangle, PlusSquare, Trash2, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddMatchDialog } from './AddMatchDialog';
 import { UpdateMatchScoreDialog } from './UpdateMatchScoreDialog';
@@ -129,6 +132,34 @@ export function MatchSchedule() {
     }
   };
 
+  const handlePrintUpcomingMatches = () => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const tableColumn = ["Date", "Time", "Home Team", "Away Team", "Location"];
+    const tableRows: (string | number)[][] = [];
+
+    upcomingMatches.forEach(match => {
+      const matchData = [
+        format(match.dateTime, 'yyyy-MM-dd'),
+        format(match.dateTime, 'HH:mm'),
+        match.homeTeam,
+        match.awayTeam,
+        match.location,
+      ];
+      tableRows.push(matchData);
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+      theme: 'grid',
+      headStyles: { fillColor: [63, 81, 181] }, // #3F51B5 (Primary Color)
+      styles: { font: 'PT Sans', fontSize: 9 },
+    });
+    doc.text("Upcoming Matches - Amateur Stats Hub", 14, 15);
+    doc.save('upcoming-matches.pdf');
+  };
+
 
   if (isLoading) {
     return (
@@ -150,7 +181,7 @@ export function MatchSchedule() {
 
   return (
     <div className="space-y-8">
-      <Card className="shadow-lg">
+      <Card className="shadow-lg print-card-plain">
         <CardHeader className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <CardTitle className="font-headline text-xl sm:text-2xl">Próximos partidos</CardTitle>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto no-print-header-actions">
@@ -164,6 +195,17 @@ export function MatchSchedule() {
               <PlusSquare className="h-4 w-4" />
               <span className="ml-2 hidden sm:inline">Agregar Partido</span>
               <span className="ml-2 sm:hidden">Agregar</span>
+            </Button>
+            <Button 
+              onClick={handlePrintUpcomingMatches} 
+              variant="outline" 
+              size="sm"
+              className="w-full sm:w-auto"
+              disabled={isLoading || upcomingMatches.length === 0}
+            >
+              <Printer className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Imprimir Calendario</span>
+              <span className="ml-2 sm:hidden">Imprimir</span>
             </Button>
           </div>
         </CardHeader>
@@ -185,7 +227,7 @@ export function MatchSchedule() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-lg">
+      <Card className="shadow-lg print-card-plain">
         <CardHeader className="p-4 sm:p-6">
           <CardTitle className="font-headline text-xl sm:text-2xl">Partidos Pasados</CardTitle>
         </CardHeader>
