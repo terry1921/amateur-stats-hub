@@ -12,11 +12,12 @@ import {
   TableCaption,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, BrainCircuit, ArrowUp, ArrowDown, Loader2, AlertTriangle, Pencil } from 'lucide-react';
+import { ArrowUpDown, BrainCircuit, ArrowUp, ArrowDown, Loader2, AlertTriangle, Pencil, BarChartHorizontalBig } from 'lucide-react';
 import type { TeamStats } from '@/types';
 import { TeamPerformanceDialog } from './TeamPerformanceDialog';
-import { UpdateTeamStatsDialog } from './UpdateTeamStatsDialog'; // New Dialog
-import { getTeams } from '@/services/firestoreService';
+import { UpdateTeamStatsDialog } from './UpdateTeamStatsDialog';
+import { getTeams, updateAllTeamRanks } from '@/services/firestoreService';
+import { useToast } from '@/hooks/use-toast';
 
 type SortKey = keyof TeamStats | null;
 type SortDirection = 'asc' | 'desc';
@@ -47,6 +48,9 @@ export function LeagueTable() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdatingRanks, setIsUpdatingRanks] = useState(false);
+
+  const { toast } = useToast();
 
   const fetchTeamsData = useCallback(async () => {
     try {
@@ -113,7 +117,28 @@ export function LeagueTable() {
   };
 
   const handleTeamStatsUpdated = () => {
-    fetchTeamsData(); // Re-fetch data when stats are updated
+    fetchTeamsData(); 
+  };
+
+  const handleUpdateRanks = async () => {
+    setIsUpdatingRanks(true);
+    try {
+      await updateAllTeamRanks();
+      toast({
+        title: "Ranks Updated",
+        description: "Team ranks have been successfully recalculated and updated.",
+      });
+      fetchTeamsData(); // Refresh data to show new ranks
+    } catch (err) {
+      console.error("Error updating ranks:", err);
+      toast({
+        variant: "destructive",
+        title: "Rank Update Failed",
+        description: "Could not update team ranks. Please try again.",
+      });
+    } finally {
+      setIsUpdatingRanks(false);
+    }
   };
   
   const SortIcon = ({ columnKey }: { columnKey: keyof TeamStats }) => {
@@ -123,7 +148,7 @@ export function LeagueTable() {
     return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
-  if (isLoading) {
+  if (isLoading && !isUpdatingRanks) { // Don't show main loader if only ranks are updating
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -144,8 +169,16 @@ export function LeagueTable() {
   return (
     <>
       <Card className="shadow-lg">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-headline text-2xl">League Standings</CardTitle>
+          <Button onClick={handleUpdateRanks} disabled={isUpdatingRanks || isLoading} variant="outline" size="sm">
+            {isUpdatingRanks ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <BarChartHorizontalBig className="h-4 w-4" />
+            )}
+            <span className="ml-2">Update Ranks</span>
+          </Button>
         </CardHeader>
         <CardContent>
           <Table>
@@ -184,6 +217,7 @@ export function LeagueTable() {
                       onClick={() => openAnalysisDialog(team)}
                       className="text-primary hover:text-primary/80 px-2"
                       title={`Analyze ${team.name}'s performance`}
+                      disabled={isUpdatingRanks}
                     >
                       <BrainCircuit className="h-5 w-5" />
                       <span className="sr-only">Analyze</span>
@@ -194,6 +228,7 @@ export function LeagueTable() {
                       onClick={() => openUpdateStatsDialog(team)}
                       className="text-accent hover:text-accent/80 px-2"
                       title={`Edit ${team.name}'s stats`}
+                      disabled={isUpdatingRanks}
                     >
                       <Pencil className="h-5 w-5" />
                       <span className="sr-only">Edit Stats</span>
