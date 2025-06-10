@@ -17,13 +17,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon, Loader2, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { addMatch, type NewMatchInput } from '@/services/firestoreService';
+import { addMatch, type NewMatchInput, getTeams } from '@/services/firestoreService';
+import type { TeamStats } from '@/types';
 
 interface AddMatchDialogProps {
   isOpen: boolean;
@@ -32,21 +34,25 @@ interface AddMatchDialogProps {
 }
 
 const addMatchSchema = z.object({
-  homeTeam: z.string().min(1, "Home team name is required.").max(50, "Home team name is too long."),
-  awayTeam: z.string().min(1, "Away team name is required.").max(50, "Away team name is too long."),
-  location: z.string().min(1, "Location is required.").max(100, "Location name is too long."),
-  date: z.date({ required_error: "Match date is required." }),
+  homeTeam: z.string().min(1, "Home team is required."),
+  awayTeam: z.string().min(1, "Away team is required."),
+  location: z.string().min(1, "Se requiere ubicación.").max(100, "Location name is too long."),
+  date: z.date({ required_error: "La fecha del partido es obligatoria." }),
   time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)."),
 }).refine(data => data.homeTeam.toLowerCase() !== data.awayTeam.toLowerCase(), {
-  message: "Home and away teams cannot be the same.",
-  path: ["awayTeam"], 
+  message: "Los equipos locales y visitantes no pueden ser iguales.",
+  path: ["awayTeam"],
 });
 
 
 export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const [teams, setTeams] = useState<TeamStats[]>([]);
+  const [isLoadingTeams, setIsLoadingTeams] = useState(false);
+  const [fetchTeamsError, setFetchTeamsError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof addMatchSchema>>({
     resolver: zodResolver(addMatchSchema),
@@ -54,46 +60,67 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
       homeTeam: '',
       awayTeam: '',
       location: '',
-      date: undefined, // Initialize date as undefined
-      time: '', // e.g., "14:00"
+      date: undefined,
+      time: '',
     },
   });
 
   useEffect(() => {
+    async function loadTeams() {
+      if (isOpen) {
+        setIsLoadingTeams(true);
+        setFetchTeamsError(null);
+        try {
+          const fetchedTeams = await getTeams();
+          setTeams(fetchedTeams.sort((a, b) => a.name.localeCompare(b.name))); // Sort teams alphabetically
+        } catch (err) {
+          console.error("Error fetching teams for dialog:", err);
+          setFetchTeamsError("Failed to load teams. Please try again.");
+        } finally {
+          setIsLoadingTeams(false);
+        }
+      }
+    }
+    loadTeams();
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!isOpen) {
       form.reset();
-      setError(null);
+      setSubmitError(null);
       setIsSubmitting(false);
+      // Optionally clear teams if they should always refetch, or keep them for faster reopening
+      // setTeams([]); 
     }
   }, [isOpen, form]);
 
   async function onSubmit(values: z.infer<typeof addMatchSchema>) {
     setIsSubmitting(true);
-    setError(null);
+    setSubmitError(null);
 
     try {
       const matchInput: NewMatchInput = {
         homeTeam: values.homeTeam,
         awayTeam: values.awayTeam,
         location: values.location,
-        date: format(values.date, 'yyyy-MM-dd'), 
+        date: format(values.date, 'yyyy-MM-dd'),
         time: values.time,
       };
       await addMatch(matchInput);
       toast({
-        title: 'Match Added!',
-        description: `Match between ${values.homeTeam} and ${values.awayTeam} has been scheduled.`,
+        title: '¡Partido añadido!',
+        description: `Partido entre ${values.homeTeam} y ${values.awayTeam} ha sido programado.`,
       });
       onMatchAdded();
       onClose();
     } catch (e) {
       console.error('Error adding match:', e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      setError(`Failed to add match: ${errorMessage}`);
+      setSubmitError(`No se pudo agregar el partido: ${errorMessage}`);
       toast({
         variant: 'destructive',
-        title: 'Add Match Failed',
-        description: `Could not add the match. ${errorMessage}`,
+        title: 'Error al agregar partido',
+        description: `No se puede agregar partido. ${errorMessage}`,
       });
     } finally {
       setIsSubmitting(false);
@@ -104,9 +131,9 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-headline text-xl">Add New Match</DialogTitle>
+          <DialogTitle className="font-headline text-xl">Agenda un nuevo partido</DialogTitle>
           <DialogDescription>
-            Enter the details for the new match.
+            Introduzca los detalles para el nuevo partido.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -116,10 +143,23 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
               name="homeTeam"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Home Team</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter home team name" {...field} disabled={isSubmitting} />
-                  </FormControl>
+                  <FormLabel>Equipo Local</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting || isLoadingTeams}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingTeams ? "Loading teams..." : "Seleccione un equipo local"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {!isLoadingTeams && teams.map(team => (
+                        <SelectItem key={team.id} value={team.name}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                      {isLoadingTeams && <SelectItem value="loading" disabled>Cargando equipos...</SelectItem>}
+                    </SelectContent>
+                  </Select>
+                  {fetchTeamsError && <p className="text-sm text-destructive">{fetchTeamsError}</p>}
                   <FormMessage />
                 </FormItem>
               )}
@@ -129,10 +169,22 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
               name="awayTeam"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Away Team</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter away team name" {...field} disabled={isSubmitting} />
-                  </FormControl>
+                  <FormLabel>Equipo Visitante</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting || isLoadingTeams}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingTeams ? "Loading teams..." : "Seleccione un equipo visitante"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {!isLoadingTeams && teams.map(team => (
+                        <SelectItem key={team.id} value={team.name}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                      {isLoadingTeams && <SelectItem value="loading" disabled>Cargando equipos...</SelectItem>}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -142,9 +194,9 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location</FormLabel>
+                  <FormLabel>Ubicación</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter match location" {...field} disabled={isSubmitting} />
+                    <Input placeholder="Introduzca la ubicación del partido" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -156,7 +208,7 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
                 name="date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Date</FormLabel>
+                    <FormLabel>Fecha</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -171,7 +223,7 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
                             {field.value ? (
                               format(field.value, "PPP")
                             ) : (
-                              <span>Pick a date</span>
+                              <span>Escoja una fecha</span>
                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
@@ -183,7 +235,7 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
                           selected={field.value}
                           onSelect={field.onChange}
                           disabled={(date) =>
-                            date < new Date(new Date().setHours(0,0,0,0)) // Disable past dates
+                            date < new Date(new Date().setHours(0,0,0,0)) 
                           }
                           initialFocus
                         />
@@ -198,7 +250,7 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
                 name="time"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Time (HH:MM)</FormLabel>
+                    <FormLabel>Hora (HH:MM)</FormLabel>
                     <FormControl>
                       <Input type="time" {...field} disabled={isSubmitting} />
                     </FormControl>
@@ -208,10 +260,10 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
               />
             </div>
 
-            {error && (
+            {submitError && (
               <div className="flex items-center p-3 text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md">
                 <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
-                <span className="break-words">{error}</span>
+                <span className="break-words">{submitError}</span>
               </div>
             )}
             
@@ -219,7 +271,7 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
               <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
               </DialogClose>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || isLoadingTeams}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

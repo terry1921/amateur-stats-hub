@@ -38,7 +38,7 @@ export function MatchSchedule() {
       setMatches(fetchedMatches);
     } catch (err) {
       console.error("Error fetching matches:", err);
-      setError("Failed to load match schedule. Please try again later.");
+      setError("No se pudo cargar el calendario del partido. Inténtalo de nuevo más tarde.");
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +62,7 @@ export function MatchSchedule() {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading match schedule...</p>
+        <p className="mt-4 text-muted-foreground">Cargando el calendario de partidos...</p>
       </div>
     );
   }
@@ -79,19 +79,21 @@ export function MatchSchedule() {
   return (
     <>
       <Card className="shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="font-headline text-2xl">Upcoming Matches</CardTitle>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setIsAddMatchDialogOpen(true)}
-            className="no-print-header-actions"
-            disabled={isLoading}
-          >
-            <PlusSquare className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Add Match</span>
-            <span className="ml-2 sm:hidden">Add</span>
-          </Button>
+        <CardHeader className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <CardTitle className="font-headline text-xl sm:text-2xl">Próximos partidos</CardTitle>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto no-print-header-actions">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setIsAddMatchDialogOpen(true)}
+              className="w-full sm:w-auto"
+              disabled={isLoading}
+            >
+              <PlusSquare className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Agregar Partido</span>
+              <span className="ml-2 sm:hidden">Add</span>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {upcomingMatches.length > 0 ? (
