@@ -24,15 +24,15 @@ type SortDirection = 'asc' | 'desc';
 
 const columns: { key: keyof TeamStats; label: string; shortLabel?: string, numeric?: boolean }[] = [
   { key: 'rank', label: '#', numeric: true },
-  { key: 'name', label: 'Team' },
-  { key: 'played', label: 'Played', shortLabel: 'P', numeric: true },
-  { key: 'won', label: 'Won', shortLabel: 'W', numeric: true },
-  { key: 'drawn', label: 'Drawn', shortLabel: 'D', numeric: true },
-  { key: 'lost', label: 'Lost', shortLabel: 'L', numeric: true },
-  { key: 'goalsScored', label: 'Goals Scored', shortLabel: 'GS', numeric: true },
-  { key: 'goalsConceded', label: 'Goals Conceded', shortLabel: 'GC', numeric: true },
-  { key: 'goalDifference', label: 'Goal Difference', shortLabel: 'GD', numeric: true },
-  { key: 'points', label: 'Points', shortLabel: 'Pts', numeric: true },
+  { key: 'name', label: 'Equipo' },
+  { key: 'played', label: 'JJ', shortLabel: 'P', numeric: true },
+  { key: 'won', label: 'JG', shortLabel: 'W', numeric: true },
+  { key: 'drawn', label: 'JE', shortLabel: 'D', numeric: true },
+  { key: 'lost', label: 'JP', shortLabel: 'L', numeric: true },
+  { key: 'goalsScored', label: 'GA', shortLabel: 'GS', numeric: true },
+  { key: 'goalsConceded', label: 'GE', shortLabel: 'GC', numeric: true },
+  { key: 'goalDifference', label: 'DIF', shortLabel: 'GD', numeric: true },
+  { key: 'points', label: 'PTS', shortLabel: 'Pts', numeric: true },
 ];
 
 export function LeagueTable() {
@@ -170,7 +170,7 @@ export function LeagueTable() {
     <>
       <Card className="shadow-lg">
         <CardHeader className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <CardTitle className="font-headline text-xl sm:text-2xl">League Standings</CardTitle>
+          <CardTitle className="font-headline text-xl sm:text-2xl">Tabla de Posiciones</CardTitle>
           <Button 
             onClick={handleUpdateRanks} 
             disabled={isUpdatingRanks || isLoading} 
@@ -183,13 +183,13 @@ export function LeagueTable() {
             ) : (
               <BarChartHorizontalBig className="h-4 w-4" />
             )}
-            <span className="ml-2">Update Ranks</span>
+            <span className="ml-2">Actualizar posiciones</span>
           </Button>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableCaption>Official league standings. Click headers to sort. Use actions to analyze or edit team stats.</TableCaption>
+              <TableCaption>Clasificación oficial de la liga. Haz clic en los encabezados para ordenar. Usa acciones para analizar o editar las estadísticas del equipo.</TableCaption>
               <TableHeader>
                 <TableRow>
                   {columns.map((col) => (

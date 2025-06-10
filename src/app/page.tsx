@@ -12,18 +12,18 @@ export default function Home() {
       <AppHeader />
       <main className="flex-grow container mx-auto py-8 px-4">
         <Tabs defaultValue="league-table" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3 md:w-auto md:inline-flex mb-6 bg-card shadow-sm">
+          <TabsList className="grid w-full grid-cols-1 gap-2 md:w-auto md:inline-flex mb-6 bg-card shadow-sm">
             <TabsTrigger value="league-table" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <ListOrdered className="h-5 w-5 mr-2" />
-              League Table
+              Tabla de Posiciones
             </TabsTrigger>
             <TabsTrigger value="match-schedule" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <CalendarDays className="h-5 w-5 mr-2" />
-              Match Schedule
+              Calendario
             </TabsTrigger>
             <TabsTrigger value="register-team" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <PlusSquare className="h-5 w-5 mr-2" />
-              Register Team
+              Registrar Equipo
             </TabsTrigger>
           </TabsList>
           <TabsContent value="league-table">
