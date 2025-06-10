@@ -2,6 +2,8 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   Table,
   TableHeader,
@@ -128,7 +130,7 @@ export function LeagueTable() {
         title: "Ranks Updated",
         description: "Team ranks have been successfully recalculated and updated.",
       });
-      fetchTeamsData(); // Refresh data to show new ranks
+      fetchTeamsData(); 
     } catch (err) {
       console.error("Error updating ranks:", err);
       toast({
@@ -142,7 +144,25 @@ export function LeagueTable() {
   };
 
   const handlePrint = () => {
-    window.print();
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const tableColumn = columns.map(col => col.label);
+    const tableRows: (string | number)[][] = [];
+
+    sortedTeams.forEach(team => {
+      const teamData = columns.map(col => team[col.key]);
+      tableRows.push(teamData);
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+      theme: 'grid',
+      headStyles: { fillColor: [63, 81, 181] }, // #3F51B5 (Primary Color)
+      styles: { font: 'PT Sans', fontSize: 9 }, // Match body font if possible, adjust size
+    });
+    doc.text("League Table - Amateur Stats Hub", 14, 15);
+    doc.save('league-table.pdf');
   };
   
   const SortIcon = ({ columnKey }: { columnKey: keyof TeamStats }) => {
@@ -152,7 +172,7 @@ export function LeagueTable() {
     return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
-  if (isLoading && !isUpdatingRanks) { // Don't show main loader if only ranks are updating
+  if (isLoading && !isUpdatingRanks) { 
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -283,7 +303,6 @@ export function LeagueTable() {
   );
 }
 
-// Minimal Card components for structure, assuming Card, CardHeader, CardContent are available from shadcn/ui
 const Card = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={`rounded-lg border bg-card text-card-foreground ${className}`} {...props} />
 );
@@ -296,4 +315,3 @@ const CardTitle = ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElem
 const CardContent = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={`p-6 pt-0 ${className}`} {...props} />
 );
-
