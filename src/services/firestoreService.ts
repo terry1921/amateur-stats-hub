@@ -1,5 +1,5 @@
 
-import { collection, getDocs, Timestamp, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, Timestamp, query, orderBy, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { TeamStats, MatchInfo } from '@/types';
 
@@ -46,4 +46,28 @@ export async function getMatches(): Promise<MatchInfo[]> {
     } as MatchInfo;
   });
   return matchList;
+}
+
+export async function addTeam(teamName: string): Promise<string> {
+  const teamsCol = collection(db, 'teams');
+  
+  // Get current number of teams to determine rank
+  const teamSnapshot = await getDocs(teamsCol);
+  const currentTeamCount = teamSnapshot.size;
+
+  const newTeamData: Omit<TeamStats, 'id'> = {
+    name: teamName,
+    rank: currentTeamCount + 1, // New teams start at the bottom
+    played: 0,
+    won: 0,
+    drawn: 0,
+    lost: 0,
+    goalsScored: 0,
+    goalsConceded: 0,
+    goalDifference: 0,
+    points: 0,
+  };
+
+  const docRef = await addDoc(teamsCol, newTeamData);
+  return docRef.id; // Return the ID of the newly created document
 }
