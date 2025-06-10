@@ -72,7 +72,7 @@ export function LeagueTable() {
       setTeamsData(teams);
     } catch (err) {
       console.error("Error fetching teams:", err);
-      setError("Failed to load league table. Please try again later.");
+      setError("No se pudo cargar la tabla de clasificación. Inténtalo de nuevo más tarde.");
     } finally {
       setIsLoading(false);
     }
@@ -142,8 +142,8 @@ export function LeagueTable() {
     try {
       await updateAllTeamRanks();
       toast({
-        title: "Ranks Updated",
-        description: "Team ranks have been successfully recalculated and updated.",
+        title: "Posiciones Actualizadas",
+        description: "Los rangos del equipo se han recalculado y actualizado con éxito.",
       });
       fetchTeamsData(); 
     } catch (err) {
@@ -151,7 +151,7 @@ export function LeagueTable() {
       toast({
         variant: "destructive",
         title: "Rank Update Failed",
-        description: "Could not update team ranks. Please try again.",
+        description: "No se pudieron actualizar los rangos del equipo. Inténtalo de nuevo.",
       });
     } finally {
       setIsUpdatingRanks(false);
@@ -191,7 +191,7 @@ export function LeagueTable() {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading league table...</p>
+        <p className="mt-4 text-muted-foreground">Cargando Tabla de posiciones...</p>
       </div>
     );
   }
@@ -220,7 +220,6 @@ export function LeagueTable() {
                   disabled={isLoading || isUpdatingRanks}
                 >
                   <PlusSquare className="h-4 w-4" />
-                  <span className="ml-2">Registrar Equipo</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -245,7 +244,6 @@ export function LeagueTable() {
               ) : (
                 <BarChartHorizontalBig className="h-4 w-4" />
               )}
-              <span className="ml-2">Actualizar posiciones</span>
             </Button>
             <Button 
               onClick={handlePrint} 
@@ -255,7 +253,6 @@ export function LeagueTable() {
               disabled={isLoading || isUpdatingRanks}
             >
               <Printer className="h-4 w-4" />
-              <span className="ml-2">Imprimir PDF</span>
             </Button>
           </div>
         </CardHeader>
