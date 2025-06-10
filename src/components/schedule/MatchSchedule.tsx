@@ -4,11 +4,23 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { MatchInfo } from '@/types';
 import { MatchCard } from './MatchCard';
-import { getMatches } from '@/services/firestoreService';
-import { Loader2, AlertTriangle, PlusSquare } from 'lucide-react';
+import { getMatches, deleteMatch } from '@/services/firestoreService';
+import { Loader2, AlertTriangle, PlusSquare, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddMatchDialog } from './AddMatchDialog';
 import { UpdateMatchScoreDialog } from './UpdateMatchScoreDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
 
 // Re-declare Card components for smaller file as per original structure
 const Card = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -33,6 +45,11 @@ export function MatchSchedule() {
   
   const [selectedMatchForEdit, setSelectedMatchForEdit] = useState<MatchInfo | null>(null);
   const [isUpdateScoreDialogOpen, setIsUpdateScoreDialogOpen] = useState(false);
+
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [matchIdToDelete, setMatchIdToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
 
   const fetchMatches = useCallback(async () => {
     try {
@@ -75,6 +92,35 @@ export function MatchSchedule() {
 
   const handleScoreUpdated = () => {
     fetchMatches(); // Refresh the list of matches
+  };
+
+  const handleOpenDeleteDialog = (matchId: string) => {
+    setMatchIdToDelete(matchId);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteMatch = async () => {
+    if (!matchIdToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteMatch(matchIdToDelete);
+      toast({
+        title: "Match Deleted",
+        description: "The match has been successfully deleted.",
+      });
+      fetchMatches();
+    } catch (err) {
+      console.error("Error deleting match:", err);
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: "Could not delete the match. Please try again.",
+      });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteConfirmOpen(false);
+      setMatchIdToDelete(null);
+    }
   };
 
 
@@ -123,6 +169,7 @@ export function MatchSchedule() {
                   key={match.id} 
                   match={match} 
                   onEditMatch={openUpdateScoreDialog}
+                  onDeleteMatch={handleOpenDeleteDialog}
                 />
               ))}
             </div>
@@ -142,6 +189,23 @@ export function MatchSchedule() {
         onClose={closeUpdateScoreDialog}
         onScoreUpdated={handleScoreUpdated}
       />
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the match.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteMatch} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" /> }
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -1,5 +1,5 @@
 
-import { collection, getDocs, Timestamp, query, orderBy, addDoc, doc, updateDoc, runTransaction, writeBatch, setDoc } from 'firebase/firestore';
+import { collection, getDocs, Timestamp, query, orderBy, addDoc, doc, updateDoc, runTransaction, writeBatch, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { TeamStats, MatchInfo, NewMatchInput } from '@/types';
 import { parseISO } from 'date-fns';
@@ -191,5 +191,18 @@ export async function updateMatchScore(matchId: string, homeScore: number, awayS
   } catch (error) {
     console.error("Error updating match score in Firestore: ", error);
     throw new Error("Could not update match score in database.");
+  }
+}
+
+export async function deleteMatch(matchId: string): Promise<void> {
+  if (!matchId) {
+    throw new Error("Match ID must be provided to delete a match.");
+  }
+  const matchRef = doc(db, 'matches', matchId);
+  try {
+    await deleteDoc(matchRef);
+  } catch (error) {
+    console.error("Error deleting match from Firestore: ", error);
+    throw new Error("Could not delete match from database.");
   }
 }

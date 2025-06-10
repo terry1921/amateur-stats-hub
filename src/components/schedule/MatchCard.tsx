@@ -1,16 +1,17 @@
 
 import type { MatchInfo } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CalendarClock, MapPin, Users, Pencil } from 'lucide-react';
+import { CalendarClock, MapPin, Users, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 
 interface MatchCardProps {
   match: MatchInfo;
   onEditMatch: (match: MatchInfo) => void;
+  onDeleteMatch: (matchId: string) => void;
 }
 
-export function MatchCard({ match, onEditMatch }: MatchCardProps) {
+export function MatchCard({ match, onEditMatch, onDeleteMatch }: MatchCardProps) {
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
       <CardHeader>
@@ -29,6 +30,16 @@ export function MatchCard({ match, onEditMatch }: MatchCardProps) {
             >
               <Pencil className="h-4 w-4" />
               <span className="sr-only">Edit Score</span>
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => onDeleteMatch(match.id)} 
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              title="Delete Match"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">Delete Match</span>
             </Button>
           </div>
         </div>
