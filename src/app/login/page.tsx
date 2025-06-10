@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useEffect } from 'react'; // Added useEffect here
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
