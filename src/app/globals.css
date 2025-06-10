@@ -67,3 +67,42 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  body {
+    -webkit-print-color-adjust: exact; /* Chrome, Safari, Edge */
+    print-color-adjust: exact; /* Firefox */
+    background-color: white !important; /* Ensure background is white for print */
+    color: black !important; /* Ensure text is black for print */
+  }
+  .no-print, .no-print * { /* General class to hide elements */
+    display: none !important;
+  }
+  .no-print-header-actions { /* Specific class for header buttons */
+    display: none !important;
+  }
+  .no-print-actions { /* Specific class for table row action buttons */
+    display: none !important;
+  }
+  /* Hide main navigation tabs when printing */
+  main > .w-full > .grid.w-full.grid-cols-1.gap-2,
+  main > .w-full > .inline-flex.mb-6.bg-card.shadow-sm {
+    display: none !important;
+  }
+  /* Remove shadows and borders from cards for cleaner print */
+  .print-card-plain {
+    border: none !important;
+    box-shadow: none !important;
+  }
+  /* Ensure table elements are styled for print - override dark mode if active */
+  table, th, td {
+    border-color: #ccc !important; /* Light gray borders */
+    color: black !important;
+  }
+  thead {
+    background-color: #f2f2f2 !important; /* Light gray header background */
+  }
+  .print-only {
+    display: block !important; /* Or inline, flex, etc. as needed */
+  }
+}

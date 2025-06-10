@@ -12,7 +12,7 @@ import {
   TableCaption,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, BrainCircuit, ArrowUp, ArrowDown, Loader2, AlertTriangle, Pencil, BarChartHorizontalBig } from 'lucide-react';
+import { ArrowUpDown, BrainCircuit, ArrowUp, ArrowDown, Loader2, AlertTriangle, Pencil, BarChartHorizontalBig, Printer } from 'lucide-react';
 import type { TeamStats } from '@/types';
 import { TeamPerformanceDialog } from './TeamPerformanceDialog';
 import { UpdateTeamStatsDialog } from './UpdateTeamStatsDialog';
@@ -140,6 +140,10 @@ export function LeagueTable() {
       setIsUpdatingRanks(false);
     }
   };
+
+  const handlePrint = () => {
+    window.print();
+  };
   
   const SortIcon = ({ columnKey }: { columnKey: keyof TeamStats }) => {
     if (sortKey !== columnKey) {
@@ -171,20 +175,32 @@ export function LeagueTable() {
       <Card className="shadow-lg">
         <CardHeader className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <CardTitle className="font-headline text-xl sm:text-2xl">Tabla de Posiciones</CardTitle>
-          <Button 
-            onClick={handleUpdateRanks} 
-            disabled={isUpdatingRanks || isLoading} 
-            variant="outline" 
-            size="sm"
-            className="w-full sm:w-auto"
-          >
-            {isUpdatingRanks ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <BarChartHorizontalBig className="h-4 w-4" />
-            )}
-            <span className="ml-2">Actualizar posiciones</span>
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto no-print-header-actions">
+            <Button 
+              onClick={handleUpdateRanks} 
+              disabled={isUpdatingRanks || isLoading} 
+              variant="outline" 
+              size="sm"
+              className="w-full sm:w-auto"
+            >
+              {isUpdatingRanks ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <BarChartHorizontalBig className="h-4 w-4" />
+              )}
+              <span className="ml-2">Actualizar posiciones</span>
+            </Button>
+            <Button 
+              onClick={handlePrint} 
+              variant="outline" 
+              size="sm"
+              className="w-full sm:w-auto"
+              disabled={isLoading || isUpdatingRanks}
+            >
+              <Printer className="h-4 w-4" />
+              <span className="ml-2">Imprimir PDF</span>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -210,7 +226,7 @@ export function LeagueTable() {
                       </div>
                     </TableHead>
                   ))}
-                  <TableHead className="text-center whitespace-nowrap">Actions</TableHead>
+                  <TableHead className="text-center whitespace-nowrap no-print-actions">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -221,7 +237,7 @@ export function LeagueTable() {
                         {team[col.key]}
                       </TableCell>
                     ))}
-                    <TableCell className="text-center space-x-1 whitespace-nowrap">
+                    <TableCell className="text-center space-x-1 whitespace-nowrap no-print-actions">
                       <Button
                         variant="ghost"
                         size="sm"
