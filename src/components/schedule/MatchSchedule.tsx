@@ -7,7 +7,8 @@ import { MatchCard } from './MatchCard';
 import { getMatches } from '@/services/firestoreService';
 import { Loader2, AlertTriangle, PlusSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AddMatchDialog } from './AddMatchDialog'; // Import the new dialog
+import { AddMatchDialog } from './AddMatchDialog';
+import { UpdateMatchScoreDialog } from './UpdateMatchScoreDialog';
 
 // Re-declare Card components for smaller file as per original structure
 const Card = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -29,6 +30,9 @@ export function MatchSchedule() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddMatchDialogOpen, setIsAddMatchDialogOpen] = useState(false);
+  
+  const [selectedMatchForEdit, setSelectedMatchForEdit] = useState<MatchInfo | null>(null);
+  const [isUpdateScoreDialogOpen, setIsUpdateScoreDialogOpen] = useState(false);
 
   const fetchMatches = useCallback(async () => {
     try {
@@ -51,12 +55,28 @@ export function MatchSchedule() {
   const upcomingMatches = useMemo(() => {
     const now = new Date(); 
     return matches
-      .filter(match => match.dateTime >= now)
+      .filter(match => match.dateTime >= now) // You might want to adjust this filter later for showing past matches too
+      .sort((a,b) => a.dateTime.getTime() - b.dateTime.getTime()); // Ensure they are sorted chronologically
   }, [matches]);
 
   const handleMatchAdded = () => {
     fetchMatches(); // Refresh the list of matches
   };
+
+  const openUpdateScoreDialog = (match: MatchInfo) => {
+    setSelectedMatchForEdit(match);
+    setIsUpdateScoreDialogOpen(true);
+  };
+
+  const closeUpdateScoreDialog = () => {
+    setIsUpdateScoreDialogOpen(false);
+    setSelectedMatchForEdit(null);
+  };
+
+  const handleScoreUpdated = () => {
+    fetchMatches(); // Refresh the list of matches
+  };
+
 
   if (isLoading) {
     return (
@@ -99,7 +119,11 @@ export function MatchSchedule() {
           {upcomingMatches.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {upcomingMatches.map((match) => (
-                <MatchCard key={match.id} match={match} />
+                <MatchCard 
+                  key={match.id} 
+                  match={match} 
+                  onEditMatch={openUpdateScoreDialog}
+                />
               ))}
             </div>
           ) : (
@@ -111,6 +135,12 @@ export function MatchSchedule() {
         isOpen={isAddMatchDialogOpen}
         onClose={() => setIsAddMatchDialogOpen(false)}
         onMatchAdded={handleMatchAdded}
+      />
+      <UpdateMatchScoreDialog
+        match={selectedMatchForEdit}
+        isOpen={isUpdateScoreDialogOpen}
+        onClose={closeUpdateScoreDialog}
+        onScoreUpdated={handleScoreUpdated}
       />
     </>
   );

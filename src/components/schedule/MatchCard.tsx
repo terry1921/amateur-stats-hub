@@ -1,20 +1,37 @@
+
 import type { MatchInfo } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CalendarClock, MapPin, Users } from 'lucide-react';
+import { CalendarClock, MapPin, Users, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
 
 interface MatchCardProps {
   match: MatchInfo;
+  onEditMatch: (match: MatchInfo) => void;
 }
 
-export function MatchCard({ match }: MatchCardProps) {
+export function MatchCard({ match, onEditMatch }: MatchCardProps) {
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
       <CardHeader>
-        <CardTitle className="font-headline text-xl text-primary flex items-center justify-between">
-          <span>{match.homeTeam} vs {match.awayTeam}</span>
-          <Users className="h-6 w-6 text-accent" />
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="font-headline text-xl text-primary">
+            {match.homeTeam} vs {match.awayTeam}
+          </CardTitle>
+          <div className="flex items-center gap-1">
+            <Users className="h-6 w-6 text-accent" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => onEditMatch(match)} 
+              className="h-7 w-7 text-muted-foreground hover:text-accent"
+              title="Edit Score"
+            >
+              <Pencil className="h-4 w-4" />
+              <span className="sr-only">Edit Score</span>
+            </Button>
+          </div>
+        </div>
         <CardDescription>
           {match.homeScore !== undefined && match.awayScore !== undefined 
             ? `Result: ${match.homeScore} - ${match.awayScore}`

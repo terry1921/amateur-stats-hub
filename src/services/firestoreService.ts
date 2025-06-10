@@ -174,3 +174,22 @@ export async function addMatch(matchInput: NewMatchInput): Promise<string> {
   return newId; // Return the generated ID
 }
 
+export async function updateMatchScore(matchId: string, homeScore: number, awayScore: number): Promise<void> {
+  if (matchId === undefined || homeScore === undefined || awayScore === undefined) {
+    throw new Error("Match ID and scores must be provided.");
+  }
+  if (typeof homeScore !== 'number' || typeof awayScore !== 'number' || homeScore < 0 || awayScore < 0) {
+    throw new Error("Scores must be non-negative numbers.");
+  }
+
+  const matchRef = doc(db, 'matches', matchId);
+  try {
+    await updateDoc(matchRef, {
+      homeScore: homeScore,
+      awayScore: awayScore,
+    });
+  } catch (error) {
+    console.error("Error updating match score in Firestore: ", error);
+    throw new Error("Could not update match score in database.");
+  }
+}
