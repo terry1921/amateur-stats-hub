@@ -134,7 +134,7 @@ export function MatchSchedule() {
 
   const handlePrintUpcomingMatches = () => {
     const doc = new jsPDF({ orientation: 'landscape' });
-    const tableColumn = ["Date", "Time", "Home Team", "Away Team", "Location"];
+    const tableColumn = ["Fecha", "Hora", "Equipo local", "Equipo visitante", "Ubicación"];
     const tableRows: (string | number)[][] = [];
 
     upcomingMatches.forEach(match => {
@@ -157,7 +157,7 @@ export function MatchSchedule() {
       styles: { font: 'PT Sans', fontSize: 9 },
     });
     doc.text("Upcoming Matches - Amateur Stats Hub", 14, 15);
-    doc.save('upcoming-matches.pdf');
+    doc.save('calendario-de-partidos.pdf');
   };
 
 
