@@ -18,7 +18,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 
@@ -72,8 +71,15 @@ export function MatchSchedule() {
   const upcomingMatches = useMemo(() => {
     const now = new Date(); 
     return matches
-      .filter(match => match.dateTime >= now) // You might want to adjust this filter later for showing past matches too
-      .sort((a,b) => a.dateTime.getTime() - b.dateTime.getTime()); // Ensure they are sorted chronologically
+      .filter(match => match.dateTime >= now)
+      .sort((a,b) => a.dateTime.getTime() - b.dateTime.getTime());
+  }, [matches]);
+
+  const pastMatches = useMemo(() => {
+    const now = new Date();
+    return matches
+      .filter(match => match.dateTime < now)
+      .sort((a,b) => b.dateTime.getTime() - a.dateTime.getTime()); // Most recent past game first
   }, [matches]);
 
   const handleMatchAdded = () => {
@@ -143,7 +149,7 @@ export function MatchSchedule() {
   }
 
   return (
-    <>
+    <div className="space-y-8">
       <Card className="shadow-lg">
         <CardHeader className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <CardTitle className="font-headline text-xl sm:text-2xl">Próximos partidos</CardTitle>
@@ -178,6 +184,29 @@ export function MatchSchedule() {
           )}
         </CardContent>
       </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="font-headline text-xl sm:text-2xl">Partidos Pasados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {pastMatches.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {pastMatches.map((match) => (
+                <MatchCard 
+                  key={match.id} 
+                  match={match} 
+                  onEditMatch={openUpdateScoreDialog}
+                  onDeleteMatch={handleOpenDeleteDialog}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">No hay partidos pasados para mostrar.</p>
+          )}
+        </CardContent>
+      </Card>
+
       <AddMatchDialog
         isOpen={isAddMatchDialogOpen}
         onClose={() => setIsAddMatchDialogOpen(false)}
@@ -206,6 +235,7 @@ export function MatchSchedule() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }
+
