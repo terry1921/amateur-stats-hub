@@ -26,12 +26,17 @@ export default function Home() {
   const { currentUser, loading, signOutUser } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>(navItemsData[0].value);
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
 
   useEffect(() => {
     if (!loading && !currentUser) {
       router.push('/login');
     }
   }, [currentUser, loading, router]);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   if (loading || !currentUser) {
     return (
@@ -87,7 +92,7 @@ export default function Home() {
         </Tabs>
       </main>
       <footer className="text-center py-4 text-sm text-muted-foreground border-t">
-        <p>&copy; {new Date().getFullYear()} Amateur Stats Hub. All rights reserved.</p>
+        {currentYear !== null ? <p>&copy; {currentYear} Amateur Stats Hub. All rights reserved.</p> : <p>&copy; Amateur Stats Hub. All rights reserved.</p>}
       </footer>
     </div>
   );
