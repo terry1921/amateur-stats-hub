@@ -169,9 +169,15 @@ export function LeagueTable() {
   return (
     <>
       <Card className="shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="font-headline text-2xl">League Standings</CardTitle>
-          <Button onClick={handleUpdateRanks} disabled={isUpdatingRanks || isLoading} variant="outline" size="sm">
+        <CardHeader className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <CardTitle className="font-headline text-xl sm:text-2xl">League Standings</CardTitle>
+          <Button 
+            onClick={handleUpdateRanks} 
+            disabled={isUpdatingRanks || isLoading} 
+            variant="outline" 
+            size="sm"
+            className="w-full sm:w-auto"
+          >
             {isUpdatingRanks ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -181,63 +187,65 @@ export function LeagueTable() {
           </Button>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableCaption>Official league standings. Click headers to sort. Use actions to analyze or edit team stats.</TableCaption>
-            <TableHeader>
-              <TableRow>
-                {columns.map((col) => (
-                  <TableHead 
-                    key={col.key} 
-                    onClick={() => col.key !== 'name' && handleSort(col.key)} 
-                    className={`cursor-pointer hover:bg-muted/50 ${col.numeric ? 'text-right' : 'text-left'}`}
-                    title={`Sort by ${col.label}`}
-                  >
-                    <div className={`flex items-center ${col.numeric ? 'justify-end' : 'justify-start'}`}>
-                      <span className="sm:hidden">{col.shortLabel || col.label}</span>
-                      <span className="hidden sm:inline">{col.label}</span>
-                      {col.key !== 'name' && <SortIcon columnKey={col.key} />}
-                    </div>
-                  </TableHead>
-                ))}
-                <TableHead className="text-center">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedTeams.map((team) => (
-                <TableRow key={team.id}>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableCaption>Official league standings. Click headers to sort. Use actions to analyze or edit team stats.</TableCaption>
+              <TableHeader>
+                <TableRow>
                   {columns.map((col) => (
-                    <TableCell key={`${team.id}-${col.key}`} className={`${col.numeric ? 'text-right' : 'text-left'} ${col.key === 'name' ? 'font-semibold' : ''}`}>
-                      {team[col.key]}
-                    </TableCell>
+                    <TableHead 
+                      key={col.key} 
+                      onClick={() => col.key !== 'name' && handleSort(col.key)} 
+                      className={`cursor-pointer hover:bg-muted/50 whitespace-nowrap ${col.numeric ? 'text-right' : 'text-left'}`}
+                      title={`Sort by ${col.label}`}
+                    >
+                      <div className={`flex items-center ${col.numeric ? 'justify-end' : 'justify-start'}`}>
+                        <span className="sm:hidden">{col.shortLabel || col.label}</span>
+                        <span className="hidden sm:inline">{col.label}</span>
+                        {col.key !== 'name' && <SortIcon columnKey={col.key} />}
+                      </div>
+                    </TableHead>
                   ))}
-                  <TableCell className="text-center space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openAnalysisDialog(team)}
-                      className="text-primary hover:text-primary/80 px-2"
-                      title={`Analyze ${team.name}'s performance`}
-                      disabled={isUpdatingRanks}
-                    >
-                      <BrainCircuit className="h-5 w-5" />
-                      <span className="sr-only">Analyze</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openUpdateStatsDialog(team)}
-                      className="text-accent hover:text-accent/80 px-2"
-                      title={`Edit ${team.name}'s stats`}
-                      disabled={isUpdatingRanks}
-                    >
-                      <Pencil className="h-5 w-5" />
-                      <span className="sr-only">Edit Stats</span>
-                    </Button>
-                  </TableCell>
+                  <TableHead className="text-center whitespace-nowrap">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {sortedTeams.map((team) => (
+                  <TableRow key={team.id}>
+                    {columns.map((col) => (
+                      <TableCell key={`${team.id}-${col.key}`} className={`${col.numeric ? 'text-right' : 'text-left'} ${col.key === 'name' ? 'font-semibold whitespace-nowrap' : ''}`}>
+                        {team[col.key]}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-center space-x-1 whitespace-nowrap">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openAnalysisDialog(team)}
+                        className="text-primary hover:text-primary/80 px-2"
+                        title={`Analyze ${team.name}'s performance`}
+                        disabled={isUpdatingRanks}
+                      >
+                        <BrainCircuit className="h-5 w-5" />
+                        <span className="sr-only">Analyze</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openUpdateStatsDialog(team)}
+                        className="text-accent hover:text-accent/80 px-2"
+                        title={`Edit ${team.name}'s stats`}
+                        disabled={isUpdatingRanks}
+                      >
+                        <Pencil className="h-5 w-5" />
+                        <span className="sr-only">Edit Stats</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
       <TeamPerformanceDialog
