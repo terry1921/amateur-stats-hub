@@ -127,13 +127,15 @@ export default function UserManagementPage() {
     content = (
       <div className="overflow-x-auto">
         <Table>
-          <TableCaption>List of registered users. Creators can edit user roles.</TableCaption>
+          <TableCaption>
+            <br/>*Lista de usuarios creados. 
+            <br/>*Los creadores pueden editar los valores de usuarios.</TableCaption>
           <TableHeader>
             <TableRow>
-              <TableHead>Email</TableHead>
-              <TableHead>Display Name</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead className="text-center">Actions</TableHead>
+              <TableHead>Correo</TableHead>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Rol</TableHead>
+              <TableHead className="text-center">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -152,7 +154,7 @@ export default function UserManagementPage() {
                     disabled={user.uid === currentUser?.uid && user.role === 'Creator'} // Prevent creator from demoting themselves easily
                   >
                     <Edit className="h-5 w-5" />
-                    <span className="sr-only">Edit Role</span>
+                    <span className="sr-only">Editar rol</span>
                   </Button>
                 </TableCell>
               </TableRow>
@@ -180,7 +182,7 @@ export default function UserManagementPage() {
           <CardHeader>
             <div className="flex items-center gap-3">
               <UsersIcon className="h-7 w-7 text-primary" />
-              <CardTitle>User Management</CardTitle>
+              <CardTitle>Gestión de usuarios</CardTitle>
             </div>
           </CardHeader>
           <CardContent>{content}</CardContent>

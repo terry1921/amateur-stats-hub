@@ -37,14 +37,22 @@ export function AppHeader({ activeTab, onTabChange, navItemsForMenu, onSignOut, 
     router.push('/admin/users');
   };
 
+  const handleLogoClick = () => {
+    router.push('/');
+  };
+
   return (
     <header className="bg-primary text-primary-foreground py-4 px-6 shadow-md">
       <div className="container mx-auto flex items-center justify-between">
         {/* Logo and Title */}
-        <div className="flex items-center gap-2">
+        <button
+          onClick={handleLogoClick}
+          className="flex items-center gap-2 text-primary-foreground hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-primary rounded-sm p-1"
+          aria-label="Go to homepage"
+        >
           <Shield className="h-7 w-7 sm:h-8 sm:w-8" />
           <h1 className="text-xl sm:text-2xl font-headline font-bold">Amateur Stats Hub</h1>
-        </div>
+        </button>
 
         <div className="flex items-center gap-2">
           {/* Desktop User Management Button */}
