@@ -220,6 +220,7 @@ export function LeagueTable() {
                   disabled={isLoading || isUpdatingRanks}
                 >
                   <PlusSquare className="h-4 w-4" />
+                  <span className="ml-2">Registrar Equipo</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -244,6 +245,7 @@ export function LeagueTable() {
               ) : (
                 <BarChartHorizontalBig className="h-4 w-4" />
               )}
+              <span className="ml-2">Actualizar posiciones</span>
             </Button>
             <Button 
               onClick={handlePrint} 
@@ -253,6 +255,7 @@ export function LeagueTable() {
               disabled={isLoading || isUpdatingRanks}
             >
               <Printer className="h-4 w-4" />
+              <span className="ml-2">Imprimir PDF</span>
             </Button>
           </div>
         </CardHeader>

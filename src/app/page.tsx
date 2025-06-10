@@ -1,12 +1,14 @@
 
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppHeader } from "@/components/layout/Header";
 import { LeagueTable } from "@/components/league/LeagueTable";
 import { MatchSchedule } from "@/components/schedule/MatchSchedule";
-import { ListOrdered, CalendarDays, type LucideIcon } from "lucide-react";
+import { ListOrdered, CalendarDays, type LucideIcon, Loader2, LogOut } from "lucide-react";
 
 interface NavItem {
   value: string;
@@ -15,27 +17,62 @@ interface NavItem {
   component: JSX.Element;
 }
 
-const navItems: NavItem[] = [
-  { value: "league-table", label: "Tabla de Posiciones", icon: ListOrdered, component: <LeagueTable /> },
-  { value: "match-schedule", label: "Calendario", icon: CalendarDays, component: <MatchSchedule /> },
+const navItemsData: Omit<NavItem, 'component'>[] = [
+  { value: "league-table", label: "Tabla de Posiciones", icon: ListOrdered },
+  { value: "match-schedule", label: "Calendario", icon: CalendarDays },
 ];
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<string>(navItems[0].value);
+  const { currentUser, loading, signOutUser } = useAuth();
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<string>(navItemsData[0].value);
 
-  const navItemsForMenu = navItems.map(({ value, label, icon }) => ({ value, label, icon }));
+  useEffect(() => {
+    if (!loading && !currentUser) {
+      router.push('/login');
+    }
+  }, [currentUser, loading, router]);
+
+  if (loading || !currentUser) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  const navItems: NavItem[] = [
+    { ...navItemsData[0], component: <LeagueTable /> },
+    { ...navItemsData[1], component: <MatchSchedule /> },
+  ];
+
+  // Include Sign Out in the mobile menu items
+  const navItemsForMenu = [
+    ...navItemsData,
+    { value: "sign-out", label: "Sign Out", icon: LogOut }
+  ];
+
+  const handleTabChange = (tabValue: string) => {
+    if (tabValue === 'sign-out') {
+      signOutUser();
+    } else {
+      setActiveTab(tabValue);
+    }
+  };
+
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <AppHeader
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         navItemsForMenu={navItemsForMenu}
+        onSignOut={signOutUser} // Pass signOutUser for desktop header button
       />
       <main className="flex-grow container mx-auto py-8 px-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="hidden md:grid w-full md:w-auto md:inline-flex mb-6 bg-card shadow-sm">
-            {navItems.map(item => (
+            {navItemsData.map(item => ( // Use navItemsData for desktop tabs, excluding sign out
               <TabsTrigger key={item.value} value={item.value} className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <item.icon className="h-5 w-5 mr-2" />
                 {item.label}
