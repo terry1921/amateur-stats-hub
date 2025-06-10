@@ -1,5 +1,6 @@
 
-export type UserRole = 'Creator' | 'Viewer' | 'Member' | 'Administrator';
+export const USER_ROLES = ['Creator', 'Viewer', 'Member', 'Administrator'] as const;
+export type UserRole = typeof USER_ROLES[number];
 
 export type TeamStats = {
   id: string;

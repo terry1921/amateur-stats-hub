@@ -137,7 +137,7 @@ export async function updateAllTeamRanks(): Promise<void> {
 
 export async function addMatch(matchInput: NewMatchInput): Promise<string> {
   const matchesCol = collection(db, 'matches');
-  const newMatchRef = doc(matchesCol);
+  const newMatchRef = doc(matchesCol); // Create a new document reference with an auto-generated ID
   const newId = newMatchRef.id; 
 
   const { date, time, ...restOfMatchInput } = matchInput;
@@ -154,13 +154,14 @@ export async function addMatch(matchInput: NewMatchInput): Promise<string> {
   }
 
   const newMatchData = {
-    id: newId, 
+    id: newId, // Explicitly include the generated ID in the document data
     ...restOfMatchInput,
     dateTime: Timestamp.fromDate(matchDateTime),
+    // homeScore and awayScore will be undefined initially
   };
 
-  await setDoc(newMatchRef, newMatchData);
-  return newId; 
+  await setDoc(newMatchRef, newMatchData); // Use setDoc with the new reference
+  return newId; // Return the generated ID
 }
 
 export async function updateMatchScore(matchId: string, homeScore: number, awayScore: number): Promise<void> {
@@ -232,4 +233,29 @@ export async function createUserProfile(
   };
   await setDoc(userRef, newUserProfile);
   return { uid, ...newUserProfile, createdAt: now, updatedAt: now };
+}
+
+export async function getAllUsers(): Promise<UserProfile[]> {
+  const usersCol = collection(db, 'users');
+  const userSnapshot = await getDocs(usersCol);
+  const userList = userSnapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      uid: doc.id,
+      email: data.email,
+      displayName: data.displayName || 'N/A',
+      role: data.role as UserRole,
+      createdAt: (data.createdAt as Timestamp).toDate(),
+      updatedAt: (data.updatedAt as Timestamp).toDate(),
+    } as UserProfile;
+  });
+  return userList.sort((a,b) => (a.email || "").localeCompare(b.email || ""));
+}
+
+export async function updateUserRole(uid: string, newRole: UserRole): Promise<void> {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, {
+    role: newRole,
+    updatedAt: Timestamp.fromDate(new Date()),
+  });
 }
