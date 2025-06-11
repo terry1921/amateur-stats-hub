@@ -11,7 +11,7 @@ export async function addLeague(name: string): Promise<string> {
   const newLeagueData = {
     id: newLeagueRef.id,
     name: name,
-    createdAt: serverTimestamp(), // Use server timestamp
+    createdAt: serverTimestamp(), 
   };
   await setDoc(newLeagueRef, newLeagueData);
   return newLeagueRef.id;
@@ -19,24 +19,26 @@ export async function addLeague(name: string): Promise<string> {
 
 export async function getLeagues(): Promise<League[]> {
   const leaguesCol = collection(db, 'leagues');
-  const q = query(leaguesCol, orderBy('name', 'asc')); // Order by name
+  const q = query(leaguesCol, orderBy('name', 'asc')); 
   const leagueSnapshot = await getDocs(q);
   return leagueSnapshot.docs.map(doc => {
     const data = doc.data();
     return {
       id: doc.id,
       name: data.name,
-      createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(), // Handle case where createdAt might be pending
+      createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(), 
     } as League;
   });
 }
 
-// TEAM FUNCTIONS (TODO: Add leagueId filtering)
-export async function getTeams(leagueId?: string): Promise<TeamStats[]> {
+// TEAM FUNCTIONS
+export async function getTeams(leagueId: string): Promise<TeamStats[]> {
+  if (!leagueId) {
+    console.error("getTeams called without leagueId. This should not happen.");
+    throw new Error("League ID is required to fetch teams.");
+  }
   const teamsCol = collection(db, 'teams');
-  // Placeholder: In the future, this query will filter by leagueId if provided
-  // const q = leagueId ? query(teamsCol, where('leagueId', '==', leagueId), orderBy('rank', 'asc')) : query(teamsCol, orderBy('rank', 'asc'));
-  const q = query(teamsCol, orderBy('rank', 'asc')); // Current global fetch
+  const q = query(teamsCol, where('leagueId', '==', leagueId), orderBy('rank', 'asc'));
   const teamSnapshot = await getDocs(q);
   const teamList = teamSnapshot.docs.map(doc => {
     const data = doc.data();
@@ -59,24 +61,29 @@ export async function getTeams(leagueId?: string): Promise<TeamStats[]> {
 }
 
 export async function addTeam(teamName: string, leagueId: string): Promise<string> {
+  if (!leagueId) {
+    throw new Error("leagueId is required to add a team.");
+  }
   const teamsCol = collection(db, 'teams');
   
   let newRank = 1;
   try {
     await runTransaction(db, async (transaction) => {
-      // Placeholder: Future query will filter by leagueId
-      // const teamSnapshot = await transaction.get(query(teamsCol, where('leagueId', '==', leagueId)));
-      const teamSnapshot = await transaction.get(query(teamsCol));
+      const q = query(teamsCol, where('leagueId', '==', leagueId));
+      const teamSnapshot = await transaction.get(q);
       newRank = teamSnapshot.size + 1;
     });
   } catch (e) {
-    console.error("Transaction failed to determine initial rank: ", e);
-    // const currentTeams = await getDocs(query(teamsCol, where('leagueId', '==', leagueId)));
-    const currentTeams = await getDocs(query(teamsCol));
+    console.error("Transaction failed to determine initial rank for new team: ", e);
+    // Fallback: Read outside transaction if transaction failed
+    const currentTeamsQuery = query(teamsCol, where('leagueId', '==', leagueId));
+    const currentTeams = await getDocs(currentTeamsQuery);
     newRank = currentTeams.size + 1;
   }
 
+  const newTeamRef = doc(teamsCol); // Generate a new document reference for the ID
   const newTeamData = {
+    id: newTeamRef.id, // Explicitly store the ID
     name: teamName,
     rank: newRank, 
     played: 0,
@@ -87,11 +94,11 @@ export async function addTeam(teamName: string, leagueId: string): Promise<strin
     goalsConceded: 0,
     goalDifference: 0,
     points: 0,
-    leagueId: leagueId, // Store leagueId
+    leagueId: leagueId, 
   };
 
-  const docRef = await addDoc(teamsCol, newTeamData);
-  return docRef.id; 
+  await setDoc(newTeamRef, newTeamData); // Use setDoc with the generated ID
+  return newTeamRef.id; 
 }
 
 export type UpdateTeamStatsInput = {
@@ -103,9 +110,17 @@ export type UpdateTeamStatsInput = {
   goalsConceded: number;
 };
 
-export async function updateTeamStats(teamId: string, stats: UpdateTeamStatsInput, leagueId?: string): Promise<void> {
-  // Placeholder: leagueId might be used for validation or specific logic in future
+export async function updateTeamStats(teamId: string, stats: UpdateTeamStatsInput, leagueId: string): Promise<void> {
+  if (!teamId) throw new Error("Team ID is required to update stats.");
+  if (!leagueId) throw new Error("League ID is required for context when updating team stats.");
+  
   const teamRef = doc(db, 'teams', teamId);
+
+  // Optional: Validate that the team belongs to the league
+  // const teamDocSnap = await getDoc(teamRef);
+  // if (teamDocSnap.exists() && teamDocSnap.data().leagueId !== leagueId) {
+  //   throw new Error(`Team ${teamId} does not belong to league ${leagueId}. Cannot update stats.`);
+  // }
 
   const goalDifference = stats.goalsScored - stats.goalsConceded;
   const points = stats.won * 3 + stats.drawn * 1;
@@ -124,10 +139,12 @@ export async function updateTeamStats(teamId: string, stats: UpdateTeamStatsInpu
   await updateDoc(teamRef, updatedData);
 }
 
-export async function updateAllTeamRanks(leagueId?: string): Promise<void> {
-  // Placeholder: Future query will filter by leagueId
-  // const q = leagueId ? query(collection(db, 'teams'), where('leagueId', '==', leagueId)) : collection(db, 'teams');
-  const teamSnapshot = await getDocs(collection(db, 'teams'));
+export async function updateAllTeamRanks(leagueId: string): Promise<void> {
+  if (!leagueId) {
+    throw new Error("leagueId is required to update team ranks.");
+  }
+  const q = query(collection(db, 'teams'), where('leagueId', '==', leagueId));
+  const teamSnapshot = await getDocs(q);
   
   const teams = teamSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamStats));
 
@@ -138,7 +155,10 @@ export async function updateAllTeamRanks(leagueId?: string): Promise<void> {
     if (b.goalDifference !== a.goalDifference) {
       return b.goalDifference - a.goalDifference;
     }
-    return a.name.localeCompare(b.name); 
+    if (b.goalsScored !== a.goalsScored) { // Secondary tie-breaker: more goals scored
+        return b.goalsScored - a.goalsScored;
+    }
+    return a.name.localeCompare(b.name); // Tertiary tie-breaker: team name alphabetically
   });
 
   const batch = writeBatch(db);
@@ -151,12 +171,14 @@ export async function updateAllTeamRanks(leagueId?: string): Promise<void> {
 }
 
 
-// MATCH FUNCTIONS (TODO: Add leagueId filtering)
-export async function getMatches(leagueId?: string): Promise<MatchInfo[]> {
+// MATCH FUNCTIONS
+export async function getMatches(leagueId: string): Promise<MatchInfo[]> {
+  if (!leagueId) {
+    console.error("getMatches called without leagueId. This should not happen.");
+    throw new Error("League ID is required to fetch matches.");
+  }
   const matchesCol = collection(db, 'matches');
-  // Placeholder: In the future, this query will filter by leagueId if provided
-  // const q = leagueId ? query(matchesCol, where('leagueId', '==', leagueId), orderBy('dateTime', 'asc')) : query(matchesCol, orderBy('dateTime', 'asc'));
-  const q = query(matchesCol, orderBy('dateTime', 'asc')); // Current global fetch
+  const q = query(matchesCol, where('leagueId', '==', leagueId), orderBy('dateTime', 'asc'));
   const matchSnapshot = await getDocs(q);
   const matchList = matchSnapshot.docs.map(doc => {
     const data = doc.data();
@@ -177,9 +199,7 @@ export async function getMatches(leagueId?: string): Promise<MatchInfo[]> {
 
 export async function addMatch(matchInput: NewMatchInput): Promise<string> {
   const matchesCol = collection(db, 'matches');
-  const newMatchRef = doc(matchesCol);
-  const newId = newMatchRef.id; 
-
+  
   const { date, time, leagueId, ...restOfMatchInput } = matchInput;
   
   if (!date || !time) {
@@ -196,27 +216,38 @@ export async function addMatch(matchInput: NewMatchInput): Promise<string> {
     throw new Error("Invalid date or time format provided.");
   }
 
+  const newMatchRef = doc(matchesCol); // Generate a new document reference for the ID
+  const newId = newMatchRef.id; 
+
   const newMatchData = {
-    id: newId,
+    id: newId, // Store the ID within the document
     ...restOfMatchInput,
-    leagueId: leagueId, // Store leagueId
+    leagueId: leagueId, 
     dateTime: Timestamp.fromDate(matchDateTime),
+    // homeScore and awayScore will be undefined by default for new matches
   };
 
-  await setDoc(newMatchRef, newMatchData);
+  await setDoc(newMatchRef, newMatchData); // Use setDoc
   return newId;
 }
 
-export async function updateMatchScore(matchId: string, homeScore: number, awayScore: number, leagueId?: string): Promise<void> {
-  // Placeholder: leagueId for future validation
+export async function updateMatchScore(matchId: string, homeScore: number, awayScore: number, leagueId: string): Promise<void> {
   if (matchId === undefined || homeScore === undefined || awayScore === undefined) {
     throw new Error("Match ID and scores must be provided.");
   }
   if (typeof homeScore !== 'number' || typeof awayScore !== 'number' || homeScore < 0 || awayScore < 0) {
     throw new Error("Scores must be non-negative numbers.");
   }
+  if (!leagueId) {
+    throw new Error("League ID is required for context when updating match score.");
+  }
 
   const matchRef = doc(db, 'matches', matchId);
+  // Optional: Validate that the match belongs to the league
+  // const matchDocSnap = await getDoc(matchRef);
+  // if (matchDocSnap.exists() && matchDocSnap.data().leagueId !== leagueId) {
+  //   throw new Error(`Match ${matchId} does not belong to league ${leagueId}. Cannot update score.`);
+  // }
   try {
     await updateDoc(matchRef, {
       homeScore: homeScore,
@@ -228,12 +259,19 @@ export async function updateMatchScore(matchId: string, homeScore: number, awayS
   }
 }
 
-export async function deleteMatch(matchId: string, leagueId?: string): Promise<void> {
-  // Placeholder: leagueId for future validation
+export async function deleteMatch(matchId: string, leagueId: string): Promise<void> {
   if (!matchId) {
     throw new Error("Match ID must be provided to delete a match.");
   }
+  if (!leagueId) {
+    throw new Error("League ID is required for context when deleting a match.");
+  }
   const matchRef = doc(db, 'matches', matchId);
+  // Optional: Validate that the match belongs to the league
+  // const matchDocSnap = await getDoc(matchRef);
+  // if (matchDocSnap.exists() && matchDocSnap.data().leagueId !== leagueId) {
+  //   throw new Error(`Match ${matchId} does not belong to league ${leagueId}. Cannot delete.`);
+  // }
   try {
     await deleteDoc(matchRef);
   } catch (error) {
@@ -243,7 +281,7 @@ export async function deleteMatch(matchId: string, leagueId?: string): Promise<v
 }
 
 
-// USER FUNCTIONS
+// USER FUNCTIONS (These are not league-specific, so they remain as is)
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
@@ -271,15 +309,15 @@ export async function createUserProfile(
 ): Promise<UserProfile> {
   const userRef = doc(db, 'users', uid);
   const now = new Date();
-  const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'updatedAt'> & {createdAt: Timestamp, updatedAt: Timestamp } = {
+  const newUserProfileData: Omit<UserProfile, 'uid' | 'createdAt' | 'updatedAt'> & {createdAt: Timestamp, updatedAt: Timestamp } = {
     email,
     displayName,
     role,
     createdAt: Timestamp.fromDate(now),
     updatedAt: Timestamp.fromDate(now),
   };
-  await setDoc(userRef, newUserProfile);
-  return { uid, ...newUserProfile, createdAt: now, updatedAt: now };
+  await setDoc(userRef, newUserProfileData);
+  return { uid, ...newUserProfileData, createdAt: now, updatedAt: now };
 }
 
 export async function getAllUsers(): Promise<UserProfile[]> {
