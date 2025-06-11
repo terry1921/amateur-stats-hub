@@ -77,13 +77,13 @@ export default function LeagueViewPage() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        {leagueId ? <p className="ml-3">Loading league data...</p> : <p  className="ml-3">Identifying league...</p>}
+        {leagueId ? <p className="ml-3">Cargando datos de la liga...</p> : <p  className="ml-3">Identifying league...</p>}
       </div>
     );
   }
   
   const mainNavItemsWithComponents: NavItemComponent[] = [
-    { ...mainViewNavItemsData[0], component: (id) => <LeagueTable leagueId={id} /> },
+    { ...mainViewNavItemsData[0], component: (id) => <LeagueTable leagueId={id} leagueName={leagueName} /> },
     { ...mainViewNavItemsData[1], component: (id) => <MatchSchedule leagueId={id} /> },
   ];
 
@@ -125,7 +125,7 @@ export default function LeagueViewPage() {
         showDashboardButton={true} // Show dashboard button on league view
       />
       <main className="flex-grow container mx-auto py-8 px-4">
-        <h2 className="text-2xl font-bold mb-6 text-foreground">{leagueName || 'League'} View</h2>
+        <h2 className="text-2xl font-bold mb-6 text-foreground">{leagueName || 'Liga'}</h2>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="hidden md:grid w-full md:w-auto md:inline-flex mb-6 bg-card shadow-sm">
             {mainViewNavItemsData.map(item => ( 

@@ -48,9 +48,10 @@ const columns: { key: keyof TeamStats; label: string; shortLabel?: string, numer
 
 interface LeagueTableProps {
   leagueId: string; // New prop
+  leagueName: string | null; // New prop
 }
 
-export function LeagueTable({ leagueId }: LeagueTableProps) {
+export function LeagueTable({ leagueId, leagueName }: LeagueTableProps) {
   const { userProfile } = useAuth();
   const [teamsData, setTeamsData] = useState<TeamStats[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('rank');
@@ -83,7 +84,7 @@ export function LeagueTable({ leagueId }: LeagueTableProps) {
       const teams = await getTeams(leagueId); 
       setTeamsData(teams);
     } catch (err) {
-      console.error("Error fetching teams:", err);
+      console.error("Error fetching matches:", err);
       setError("No se pudo cargar la tabla de clasificación. Inténtalo de nuevo más tarde.");
     } finally {
       setIsLoading(false);
@@ -189,7 +190,7 @@ export function LeagueTable({ leagueId }: LeagueTableProps) {
       headStyles: { fillColor: [63, 81, 181] },
       styles: { font: 'PT Sans', fontSize: 9 },
     });
-    doc.text("League Table - Amateur Stats Hub", 14, 15);
+    doc.text(`Tabla de Posiciones - ${leagueName}`, 14, 15);
     doc.save('tabla-de-posiciones.pdf');
   };
   
