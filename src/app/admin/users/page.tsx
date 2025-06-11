@@ -184,7 +184,7 @@ export default function UserManagementPage() {
               <UsersIcon className="h-7 w-7 text-primary" />
               <CardTitle>Gestión de usuarios</CardTitle>
             </div>
-          </Header>
+          </CardHeader>
           <CardContent>{content}</CardContent>
         </Card>
       </main>
@@ -202,3 +202,4 @@ export default function UserManagementPage() {
     </div>
   );
 }
+

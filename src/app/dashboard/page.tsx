@@ -13,6 +13,7 @@ import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { CreateLeagueDialog } from '@/components/dashboard/CreateLeagueDialog';
 import { Loader2, AlertTriangle, Users, LogOut, PlusSquare, Trophy, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 export default function DashboardPage() {
   const { currentUser, userProfile, loading: authLoading, signOutUser } = useAuth();
@@ -67,7 +68,7 @@ export default function DashboardPage() {
     );
   }
 
-  const canCreateLeague = userProfile?.role === 'Creator' || userProfile?.role === 'Administrator';
+  const canCreateLeague = userProfile?.role === 'Creator'; // Updated this line
 
   const navItemsForMenu = [];
    if (userProfile?.role === 'Creator') {
