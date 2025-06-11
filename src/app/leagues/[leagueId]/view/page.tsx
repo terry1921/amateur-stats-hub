@@ -8,8 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppHeader } from "@/components/layout/Header";
 import { LeagueTable } from "@/components/league/LeagueTable";
 import { MatchSchedule } from "@/components/schedule/MatchSchedule";
-import { ListOrdered, CalendarDays, type LucideIcon, Loader2, LogOut, Users, LayoutDashboard } from "lucide-react";
-import { getLeagues, type League } from "@/services/firestoreService"; // To fetch league name
+import { ListOrdered, CalendarDays, type LucideIcon, Loader2, LogOut, Users, LayoutDashboard, AlertTriangle } from "lucide-react";
+import { getLeagueById } from "@/services/firestoreService"; // Import getLeagueById
 
 interface NavItemBase {
   value: string;
@@ -41,6 +41,7 @@ export default function LeagueViewPage() {
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [leagueName, setLeagueName] = useState<string | null>(null);
   const [isLoadingLeagueName, setIsLoadingLeagueName] = useState(true);
+  const [leagueError, setLeagueError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !currentUser) {
@@ -53,31 +54,63 @@ export default function LeagueViewPage() {
   }, []);
 
   useEffect(() => {
-    async function fetchLeagueName() {
+    async function fetchLeagueDetails() {
       if (leagueId) {
         setIsLoadingLeagueName(true);
+        setLeagueError(null);
         try {
-          // This is a bit inefficient if getLeagues fetches all leagues.
-          // A getLeagueById function would be better. For now, let's filter.
-          const leagues = await getLeagues();
-          const currentLeague = leagues.find(l => l.id === leagueId);
-          setLeagueName(currentLeague?.name || "League");
+          const currentLeague = await getLeagueById(leagueId);
+          if (currentLeague) {
+            setLeagueName(currentLeague.name);
+          } else {
+            setLeagueName("Liga no encontrada");
+            setLeagueError(`No se pudo encontrar una liga con el ID: ${leagueId}. Por favor regrese al dashboard.`);
+          }
         } catch (error) {
-          console.error("Error fetching league name:", error);
-          setLeagueName("League"); // Fallback name
+          console.error("Error fetching league details:", error);
+          setLeagueName("Error al cargar la liga");
+          setLeagueError("No se pudo cargar la información de la liga. Por favor, inténtalo de nuevo más tarde.");
         } finally {
           setIsLoadingLeagueName(false);
         }
+      } else {
+        setLeagueError("No se proporcionó ID de liga.");
+        setIsLoadingLeagueName(false);
       }
     }
-    fetchLeagueName();
+    fetchLeagueDetails();
   }, [leagueId]);
 
   if (loading || !currentUser || !leagueId || isLoadingLeagueName) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        {leagueId ? <p className="ml-3">Cargando datos de la liga...</p> : <p  className="ml-3">Identifying league...</p>}
+        {isLoadingLeagueName && <p className="ml-3 mt-2">Cargando datos de la liga...</p>}
+        {!leagueId && <p className="ml-3 mt-2">Identificando liga...</p>}
+      </div>
+    );
+  }
+
+  if (leagueError && !isLoadingLeagueName) {
+     return (
+      <div className="flex flex-col min-h-screen bg-background">
+         <AppHeader
+            activeTab={activeTab}
+            onTabChange={() => {}}
+            navItemsForMenu={getNavItemsForMenu().map(item => ({value: item.value, label: item.label, icon: item.icon}))}
+            onSignOut={signOutUser}
+            showUserManagementButton={userProfile?.role === 'Creator'}
+            showDashboardButton={true}
+          />
+        <main className="flex-grow container mx-auto py-8 px-4 flex flex-col items-center justify-center">
+          <AlertTriangle className="h-16 w-16 text-destructive mb-4" />
+          <h2 className="text-2xl font-bold mb-2 text-foreground">Error al cargar la liga</h2>
+          <p className="text-muted-foreground text-center mb-6">{leagueError}</p>
+          <Button onClick={() => router.push('/dashboard')}>Volver al Dashboard</Button>
+        </main>
+         <footer className="text-center py-4 text-sm text-muted-foreground border-t">
+            {currentYear !== null ? <p>&copy; {currentYear} Amateur Stats Hub. All rights reserved.</p> : <p>&copy; Amateur Stats Hub. All rights reserved.</p>}
+        </footer>
       </div>
     );
   }

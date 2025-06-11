@@ -11,7 +11,7 @@ export async function addLeague(name: string): Promise<string> {
   const newLeagueData = {
     id: newLeagueRef.id,
     name: name,
-    createdAt: serverTimestamp(), 
+    createdAt: serverTimestamp(),
   };
   await setDoc(newLeagueRef, newLeagueData);
   return newLeagueRef.id;
@@ -19,17 +19,39 @@ export async function addLeague(name: string): Promise<string> {
 
 export async function getLeagues(): Promise<League[]> {
   const leaguesCol = collection(db, 'leagues');
-  const q = query(leaguesCol, orderBy('name', 'asc')); 
+  const q = query(leaguesCol, orderBy('name', 'asc'));
   const leagueSnapshot = await getDocs(q);
   return leagueSnapshot.docs.map(doc => {
     const data = doc.data();
     return {
       id: doc.id,
       name: data.name,
-      createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(), 
+      createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
     } as League;
   });
 }
+
+export async function getLeagueById(leagueId: string): Promise<League | null> {
+  if (!leagueId) {
+    console.error("getLeagueById called without leagueId.");
+    return null;
+  }
+  const leagueRef = doc(db, 'leagues', leagueId);
+  const leagueSnap = await getDoc(leagueRef);
+
+  if (leagueSnap.exists()) {
+    const data = leagueSnap.data();
+    return {
+      id: leagueSnap.id,
+      name: data.name,
+      createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
+    } as League;
+  } else {
+    console.log(`No league found with ID: ${leagueId}`);
+    return null;
+  }
+}
+
 
 // TEAM FUNCTIONS
 export async function getTeams(leagueId: string): Promise<TeamStats[]> {
@@ -65,7 +87,7 @@ export async function addTeam(teamName: string, leagueId: string): Promise<strin
     throw new Error("leagueId is required to add a team.");
   }
   const teamsCol = collection(db, 'teams');
-  
+
   let newRank = 1;
   try {
     await runTransaction(db, async (transaction) => {
@@ -74,7 +96,11 @@ export async function addTeam(teamName: string, leagueId: string): Promise<strin
       newRank = teamSnapshot.size + 1;
     });
   } catch (e) {
-    console.error("Transaction failed to determine initial rank for new team: ", e);
+    if (e instanceof Error) {
+      console.error("Transaction failed to determine initial rank for new team: ", e.message, e.stack);
+    } else {
+      console.error("Transaction failed with non-Error object:", e);
+    }
     // Fallback: Read outside transaction if transaction failed
     const currentTeamsQuery = query(teamsCol, where('leagueId', '==', leagueId));
     const currentTeams = await getDocs(currentTeamsQuery);
@@ -85,7 +111,7 @@ export async function addTeam(teamName: string, leagueId: string): Promise<strin
   const newTeamData = {
     id: newTeamRef.id, // Explicitly store the ID
     name: teamName,
-    rank: newRank, 
+    rank: newRank,
     played: 0,
     won: 0,
     drawn: 0,
@@ -94,11 +120,11 @@ export async function addTeam(teamName: string, leagueId: string): Promise<strin
     goalsConceded: 0,
     goalDifference: 0,
     points: 0,
-    leagueId: leagueId, 
+    leagueId: leagueId,
   };
 
   await setDoc(newTeamRef, newTeamData); // Use setDoc with the generated ID
-  return newTeamRef.id; 
+  return newTeamRef.id;
 }
 
 export type UpdateTeamStatsInput = {
@@ -113,14 +139,8 @@ export type UpdateTeamStatsInput = {
 export async function updateTeamStats(teamId: string, stats: UpdateTeamStatsInput, leagueId: string): Promise<void> {
   if (!teamId) throw new Error("Team ID is required to update stats.");
   if (!leagueId) throw new Error("League ID is required for context when updating team stats.");
-  
-  const teamRef = doc(db, 'teams', teamId);
 
-  // Optional: Validate that the team belongs to the league
-  // const teamDocSnap = await getDoc(teamRef);
-  // if (teamDocSnap.exists() && teamDocSnap.data().leagueId !== leagueId) {
-  //   throw new Error(`Team ${teamId} does not belong to league ${leagueId}. Cannot update stats.`);
-  // }
+  const teamRef = doc(db, 'teams', teamId);
 
   const goalDifference = stats.goalsScored - stats.goalsConceded;
   const points = stats.won * 3 + stats.drawn * 1;
@@ -135,7 +155,7 @@ export async function updateTeamStats(teamId: string, stats: UpdateTeamStatsInpu
     goalDifference,
     points,
   };
-  
+
   await updateDoc(teamRef, updatedData);
 }
 
@@ -145,7 +165,7 @@ export async function updateAllTeamRanks(leagueId: string): Promise<void> {
   }
   const q = query(collection(db, 'teams'), where('leagueId', '==', leagueId));
   const teamSnapshot = await getDocs(q);
-  
+
   const teams = teamSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamStats));
 
   teams.sort((a, b) => {
@@ -199,17 +219,17 @@ export async function getMatches(leagueId: string): Promise<MatchInfo[]> {
 
 export async function addMatch(matchInput: NewMatchInput): Promise<string> {
   const matchesCol = collection(db, 'matches');
-  
+
   const { date, time, leagueId, ...restOfMatchInput } = matchInput;
-  
+
   if (!date || !time) {
     throw new Error("Date and time are required to create a match.");
   }
   if (!leagueId) {
     throw new Error("League ID is required to create a match.");
   }
-  
-  const dateTimeString = `${date}T${time}:00`; 
+
+  const dateTimeString = `${date}T${time}:00`;
   const matchDateTime = parseISO(dateTimeString);
 
   if (isNaN(matchDateTime.getTime())) {
@@ -217,12 +237,12 @@ export async function addMatch(matchInput: NewMatchInput): Promise<string> {
   }
 
   const newMatchRef = doc(matchesCol); // Generate a new document reference for the ID
-  const newId = newMatchRef.id; 
+  const newId = newMatchRef.id;
 
   const newMatchData = {
     id: newId, // Store the ID within the document
     ...restOfMatchInput,
-    leagueId: leagueId, 
+    leagueId: leagueId,
     dateTime: Timestamp.fromDate(matchDateTime),
     // homeScore and awayScore will be undefined by default for new matches
   };
@@ -243,11 +263,6 @@ export async function updateMatchScore(matchId: string, homeScore: number, awayS
   }
 
   const matchRef = doc(db, 'matches', matchId);
-  // Optional: Validate that the match belongs to the league
-  // const matchDocSnap = await getDoc(matchRef);
-  // if (matchDocSnap.exists() && matchDocSnap.data().leagueId !== leagueId) {
-  //   throw new Error(`Match ${matchId} does not belong to league ${leagueId}. Cannot update score.`);
-  // }
   try {
     await updateDoc(matchRef, {
       homeScore: homeScore,
@@ -267,11 +282,6 @@ export async function deleteMatch(matchId: string, leagueId: string): Promise<vo
     throw new Error("League ID is required for context when deleting a match.");
   }
   const matchRef = doc(db, 'matches', matchId);
-  // Optional: Validate that the match belongs to the league
-  // const matchDocSnap = await getDoc(matchRef);
-  // if (matchDocSnap.exists() && matchDocSnap.data().leagueId !== leagueId) {
-  //   throw new Error(`Match ${matchId} does not belong to league ${leagueId}. Cannot delete.`);
-  // }
   try {
     await deleteDoc(matchRef);
   } catch (error) {
