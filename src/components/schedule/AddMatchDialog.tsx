@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,10 +24,11 @@ import { CalendarIcon, Loader2, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { addMatch, type NewMatchInput, getTeams } from '@/services/firestoreService';
+import { addMatch, type NewMatchInput, getTeams } from '@/services/firestoreService'; // getTeams and addMatch will need leagueId
 import type { TeamStats } from '@/types';
 
 interface AddMatchDialogProps {
+  leagueId: string; // New prop
   isOpen: boolean;
   onClose: () => void;
   onMatchAdded: () => void;
@@ -44,7 +45,7 @@ const addMatchSchema = z.object({
   path: ["awayTeam"],
 });
 
-const TEAMS_CACHE_KEY = 'matchDialog_teamsCache';
+const TEAMS_CACHE_KEY_PREFIX = 'matchDialog_teamsCache_'; // Prefix to make cache key league-specific
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 interface CachedTeams {
@@ -52,7 +53,7 @@ interface CachedTeams {
   data: TeamStats[];
 }
 
-export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialogProps) {
+export function AddMatchDialog({ leagueId, isOpen, onClose, onMatchAdded }: AddMatchDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -71,39 +72,39 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
       time: '',
     },
   });
+  
+  const getTeamsCacheKey = useCallback(() => `${TEAMS_CACHE_KEY_PREFIX}${leagueId}`, [leagueId]);
 
   useEffect(() => {
     async function loadTeams() {
-      if (isOpen) {
+      if (isOpen && leagueId) {
         setIsLoadingTeams(true);
         setFetchTeamsError(null);
+        const cacheKey = getTeamsCacheKey();
 
-        // Try to load from cache
         try {
-          const cachedItem = localStorage.getItem(TEAMS_CACHE_KEY);
+          const cachedItem = localStorage.getItem(cacheKey);
           if (cachedItem) {
             const parsedCache: CachedTeams = JSON.parse(cachedItem);
             if (Date.now() - parsedCache.timestamp < CACHE_DURATION_MS) {
               setTeams(parsedCache.data.sort((a, b) => a.name.localeCompare(b.name)));
               setIsLoadingTeams(false);
-              return; // Use cached data
+              return; 
             }
           }
         } catch (e) {
           console.warn("Failed to load or parse teams from cache:", e);
-          // Proceed to fetch from Firestore if cache is invalid or error occurs
         }
         
-        // Fetch from Firestore if cache is not available or expired
         try {
-          const fetchedTeams = await getTeams();
+          // TODO: Modify getTeams to accept leagueId and filter
+          const fetchedTeams = await getTeams(leagueId); 
           const sortedTeams = fetchedTeams.sort((a, b) => a.name.localeCompare(b.name));
           setTeams(sortedTeams);
           
-          // Save to cache
           try {
             const newCache: CachedTeams = { timestamp: Date.now(), data: sortedTeams };
-            localStorage.setItem(TEAMS_CACHE_KEY, JSON.stringify(newCache));
+            localStorage.setItem(cacheKey, JSON.stringify(newCache));
           } catch (e) {
             console.warn("Failed to save teams to cache:", e);
           }
@@ -117,7 +118,7 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
       }
     }
     loadTeams();
-  }, [isOpen]);
+  }, [isOpen, leagueId, getTeamsCacheKey]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -131,6 +132,13 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
     setIsSubmitting(true);
     setSubmitError(null);
 
+    if (!leagueId) {
+        setSubmitError('League ID is missing. Cannot add match.');
+        setIsSubmitting(false);
+        toast({ variant: 'destructive', title: 'Error', description: 'League ID is missing.' });
+        return;
+    }
+
     try {
       const matchInput: NewMatchInput = {
         homeTeam: values.homeTeam,
@@ -138,6 +146,7 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
         location: values.location,
         date: format(values.date, 'yyyy-MM-dd'),
         time: values.time,
+        leagueId: leagueId, // Include leagueId
       };
       await addMatch(matchInput);
       toast({
@@ -321,4 +330,3 @@ export function AddMatchDialog({ isOpen, onClose, onMatchAdded }: AddMatchDialog
     </Dialog>
   );
 }
-

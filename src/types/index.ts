@@ -2,6 +2,12 @@
 export const USER_ROLES = ['Creator', 'Viewer', 'Member', 'Administrator'] as const;
 export type UserRole = typeof USER_ROLES[number];
 
+export type League = {
+  id: string;
+  name: string;
+  createdAt: Date; // Stored as Timestamp in Firestore
+};
+
 export type TeamStats = {
   id: string;
   rank: number;
@@ -14,6 +20,7 @@ export type TeamStats = {
   goalsConceded: number;
   goalDifference: number;
   points: number;
+  leagueId?: string; // Optional for now, will become required
 };
 
 export type MatchInfo = {
@@ -24,6 +31,7 @@ export type MatchInfo = {
   dateTime: Date;
   homeScore?: number; // Optional, for past matches
   awayScore?: number; // Optional, for past matches
+  leagueId?: string; // Optional for now, will become required
 };
 
 // Input type for adding a new match, before it has an ID from Firestore
@@ -34,6 +42,7 @@ export type NewMatchInput = {
   location: string;
   date: string; // Date as string (YYYY-MM-DD)
   time: string; // Time as string (HH:MM)
+  leagueId: string; // Will be required
 };
 
 export interface UserProfile {

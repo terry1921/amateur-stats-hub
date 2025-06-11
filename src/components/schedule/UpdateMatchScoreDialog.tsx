@@ -19,11 +19,12 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import type { MatchInfo } from '@/types';
-import { updateMatchScore } from '@/services/firestoreService';
+import { updateMatchScore } from '@/services/firestoreService'; // updateMatchScore will need leagueId
 import { useToast } from '@/hooks/use-toast';
 
 interface UpdateMatchScoreDialogProps {
   match: MatchInfo | null;
+  leagueId: string; // New prop
   isOpen: boolean;
   onClose: () => void;
   onScoreUpdated: () => void;
@@ -34,7 +35,7 @@ const scoreSchema = z.object({
   awayScore: z.coerce.number().int().min(0, "El resultado debe ser un número entero no negativo."),
 });
 
-export function UpdateMatchScoreDialog({ match, isOpen, onClose, onScoreUpdated }: UpdateMatchScoreDialogProps) {
+export function UpdateMatchScoreDialog({ match, leagueId, isOpen, onClose, onScoreUpdated }: UpdateMatchScoreDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -58,13 +59,18 @@ export function UpdateMatchScoreDialog({ match, isOpen, onClose, onScoreUpdated 
   }, [match, isOpen, form]);
 
   async function onSubmit(values: z.infer<typeof scoreSchema>) {
-    if (!match) return;
+    if (!match || !leagueId) {
+      setError('Match or League ID is missing.');
+      toast({ variant: 'destructive', title: 'Error', description: 'Match or League ID is missing.' });
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      await updateMatchScore(match.id, values.homeScore, values.awayScore);
+      // TODO: Modify updateMatchScore to accept leagueId
+      await updateMatchScore(match.id, values.homeScore, values.awayScore, leagueId); 
       toast({
         title: 'Resultado actualizado!',
         description: `El resultado de ${match.homeTeam} vs ${match.awayTeam} ha sido actualizado ${values.homeScore} - ${values.awayScore}.`,

@@ -7,7 +7,7 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import type { MatchInfo } from '@/types';
 import { MatchCard } from './MatchCard';
-import { getMatches, deleteMatch } from '@/services/firestoreService';
+import { getMatches, deleteMatch } from '@/services/firestoreService'; // getMatches and deleteMatch will need leagueId
 import { Loader2, AlertTriangle, PlusSquare, Trash2, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddMatchDialog } from './AddMatchDialog';
@@ -38,7 +38,11 @@ const CardContent = ({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
   <div className={`p-6 pt-0 ${className}`} {...props} />
 );
 
-export function MatchSchedule() {
+interface MatchScheduleProps {
+  leagueId: string; // New prop
+}
+
+export function MatchSchedule({ leagueId }: MatchScheduleProps) {
   const { userProfile } = useAuth();
   const [matches, setMatches] = useState<MatchInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,10 +58,16 @@ export function MatchSchedule() {
   const { toast } = useToast();
 
   const fetchMatches = useCallback(async () => {
+     if (!leagueId) {
+        setError("League not selected.");
+        setIsLoading(false);
+        return;
+    }
     try {
       setIsLoading(true);
       setError(null);
-      const fetchedMatches = await getMatches();
+      // TODO: Modify getMatches to accept leagueId and filter
+      const fetchedMatches = await getMatches(leagueId); 
       setMatches(fetchedMatches);
     } catch (err) {
       console.error("Error fetching matches:", err);
@@ -65,7 +75,7 @@ export function MatchSchedule() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [leagueId]); // Add leagueId to dependencies
 
   useEffect(() => {
     fetchMatches();
@@ -112,7 +122,8 @@ export function MatchSchedule() {
     if (!matchIdToDelete) return;
     setIsDeleting(true);
     try {
-      await deleteMatch(matchIdToDelete);
+      // TODO: Modify deleteMatch to accept leagueId
+      await deleteMatch(matchIdToDelete, leagueId); 
       toast({
         title: "Partido Eliminado",
         description: "El partido ha sido eliminado exitosamente.",
@@ -161,8 +172,17 @@ export function MatchSchedule() {
   };
 
   const canManageMatches = userProfile?.role === 'Administrator' || userProfile?.role === 'Creator';
-  const canView = !!userProfile?.role; // All authenticated users can view
+  const canView = !!userProfile?.role; 
   const canEditScore = userProfile?.role === 'Member' || userProfile?.role === 'Administrator' || userProfile?.role === 'Creator';
+
+  if (!leagueId && !isLoading) {
+     return (
+      <div className="flex flex-col items-center justify-center h-64 text-destructive">
+        <AlertTriangle className="h-12 w-12" />
+        <p className="mt-4">No league selected. Please go to the dashboard to select a league.</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -260,6 +280,7 @@ export function MatchSchedule() {
 
       {canManageMatches && (
         <AddMatchDialog
+          leagueId={leagueId} // Pass leagueId
           isOpen={isAddMatchDialogOpen}
           onClose={() => setIsAddMatchDialogOpen(false)}
           onMatchAdded={handleMatchAdded}
@@ -268,6 +289,7 @@ export function MatchSchedule() {
       {canEditScore && selectedMatchForEdit && (
          <UpdateMatchScoreDialog
           match={selectedMatchForEdit}
+          leagueId={leagueId} // Pass leagueId
           isOpen={isUpdateScoreDialogOpen}
           onClose={closeUpdateScoreDialog}
           onScoreUpdated={handleScoreUpdated}

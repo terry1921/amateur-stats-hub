@@ -7,13 +7,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label'; // Keep if used, but FormLabel is typical with react-hook-form
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; // Keep if outer card is still needed
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { addTeam } from '@/services/firestoreService';
+import { addTeam } from '@/services/firestoreService'; // addTeam will need leagueId
 import { Loader2, AlertTriangle } from 'lucide-react';
-import { DialogFooter, DialogClose } from '@/components/ui/dialog'; // For cancel button
+import { DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 const formSchema = z.object({
   teamName: z
@@ -23,11 +21,12 @@ const formSchema = z.object({
 });
 
 interface RegisterTeamFormProps {
+  leagueId: string; // New prop
   onTeamRegistered?: () => void;
   onCloseDialog?: () => void;
 }
 
-export function RegisterTeamForm({ onTeamRegistered, onCloseDialog }: RegisterTeamFormProps) {
+export function RegisterTeamForm({ leagueId, onTeamRegistered, onCloseDialog }: RegisterTeamFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -42,15 +41,21 @@ export function RegisterTeamForm({ onTeamRegistered, onCloseDialog }: RegisterTe
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     setError(null);
+    if (!leagueId) {
+        setError('League ID is missing. Cannot register team.');
+        setIsSubmitting(false);
+        toast({ variant: 'destructive', title: 'Error', description: 'League ID is missing.' });
+        return;
+    }
     try {
-      await addTeam(values.teamName);
+      await addTeam(values.teamName, leagueId); // Pass leagueId to addTeam
       toast({
         title: 'Team Registered!',
-        description: `${values.teamName} has been successfully registered.`,
+        description: `${values.teamName} has been successfully registered to the league.`,
       });
       form.reset();
       onTeamRegistered?.(); 
-      onCloseDialog?.(); // Close the dialog after successful registration
+      onCloseDialog?.(); 
     } catch (err) {
       console.error('Error registering team:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
@@ -65,17 +70,7 @@ export function RegisterTeamForm({ onTeamRegistered, onCloseDialog }: RegisterTe
     }
   }
 
-  // If the form is intended to be used outside a Card when in a dialog,
-  // you might remove the Card, CardHeader, CardContent structure from here.
-  // For now, I'm keeping it assuming it might be styled with a Card aesthetic even in a dialog.
-  // If the Dialog provides its own title (which it does from LeagueTable), CardTitle/Description here might be redundant.
   return (
-    // <Card className="w-full max-w-lg mx-auto shadow-lg"> remove if dialog provides chrome
-    //   <CardHeader>
-    //     <CardTitle className="font-headline text-2xl">Register New Team</CardTitle>
-    //     <CardDescription>Enter the name of the new team to add them to the league.</CardDescription>
-    //   </CardHeader>
-    //   <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
             <FormField
@@ -116,7 +111,5 @@ export function RegisterTeamForm({ onTeamRegistered, onCloseDialog }: RegisterTe
             </DialogFooter>
           </form>
         </Form>
-    //   </CardContent>
-    // </Card>
   );
 }

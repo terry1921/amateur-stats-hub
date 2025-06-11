@@ -26,7 +26,7 @@ import type { TeamStats } from '@/types';
 import { TeamPerformanceDialog } from './TeamPerformanceDialog';
 import { UpdateTeamStatsDialog } from './UpdateTeamStatsDialog';
 import { RegisterTeamForm } from '@/components/team/RegisterTeamForm';
-import { getTeams, updateAllTeamRanks } from '@/services/firestoreService';
+import { getTeams, updateAllTeamRanks } from '@/services/firestoreService'; // getTeams and updateAllTeamRanks will need leagueId
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -46,7 +46,12 @@ const columns: { key: keyof TeamStats; label: string; shortLabel?: string, numer
   { key: 'points', label: 'PTS', shortLabel: 'Pts', numeric: true },
 ];
 
-export function LeagueTable() {
+interface LeagueTableProps {
+  leagueId: string; // New prop
+  leagueName: string | null; // New prop
+}
+
+export function LeagueTable({ leagueId, leagueName }: LeagueTableProps) {
   const { userProfile } = useAuth();
   const [teamsData, setTeamsData] = useState<TeamStats[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('rank');
@@ -67,18 +72,24 @@ export function LeagueTable() {
   const { toast } = useToast();
 
   const fetchTeamsData = useCallback(async () => {
+    if (!leagueId) {
+        setError("League not selected.");
+        setIsLoading(false);
+        return;
+    }
     try {
       setIsLoading(true);
       setError(null);
-      const teams = await getTeams();
+      // TODO: Modify getTeams to accept leagueId and filter
+      const teams = await getTeams(leagueId); 
       setTeamsData(teams);
     } catch (err) {
-      console.error("Error fetching teams:", err);
+      console.error("Error fetching matches:", err);
       setError("No se pudo cargar la tabla de clasificación. Inténtalo de nuevo más tarde.");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [leagueId]); // Add leagueId to dependencies
 
   useEffect(() => {
     fetchTeamsData();
@@ -142,7 +153,8 @@ export function LeagueTable() {
   const handleUpdateRanks = async () => {
     setIsUpdatingRanks(true);
     try {
-      await updateAllTeamRanks();
+      // TODO: Modify updateAllTeamRanks to accept leagueId
+      await updateAllTeamRanks(leagueId); 
       toast({
         title: "Posiciones Actualizadas",
         description: "Los rangos del equipo se han recalculado y actualizado con éxito.",
@@ -178,7 +190,7 @@ export function LeagueTable() {
       headStyles: { fillColor: [63, 81, 181] },
       styles: { font: 'PT Sans', fontSize: 9 },
     });
-    doc.text("League Table - Amateur Stats Hub", 14, 15);
+    doc.text(`Tabla de Posiciones - ${leagueName}`, 14, 15);
     doc.save('tabla-de-posiciones.pdf');
   };
   
@@ -192,7 +204,16 @@ export function LeagueTable() {
   const canRegisterTeams = userProfile?.role === 'Administrator' || userProfile?.role === 'Creator';
   const canRecalculateRanks = userProfile?.role === 'Member' || userProfile?.role === 'Administrator' || userProfile?.role === 'Creator';
   const canUpdateStats = userProfile?.role === 'Member' || userProfile?.role === 'Administrator' || userProfile?.role === 'Creator';
-  const canView = userProfile?.role; // All authenticated users can view
+  const canView = !!userProfile?.role; 
+
+  if (!leagueId && !isLoading) {
+     return (
+      <div className="flex flex-col items-center justify-center h-64 text-destructive">
+        <AlertTriangle className="h-12 w-12" />
+        <p className="mt-4">No league selected. Please go to the dashboard to select a league.</p>
+      </div>
+    );
+  }
 
   if (isLoading && !isUpdatingRanks) { 
     return (
@@ -236,6 +257,7 @@ export function LeagueTable() {
                     <DialogTitle className="font-headline text-2xl">Register New Team</DialogTitle>
                   </DialogHeader>
                   <RegisterTeamForm 
+                    leagueId={leagueId} // Pass leagueId
                     onTeamRegistered={handleTeamRegistered} 
                     onCloseDialog={() => setIsRegisterTeamDialogOpen(false)}
                   />
@@ -354,6 +376,7 @@ export function LeagueTable() {
       {canUpdateStats && selectedTeamForUpdate && (
         <UpdateTeamStatsDialog
           team={selectedTeamForUpdate}
+          leagueId={leagueId} // Pass leagueId
           isOpen={isUpdateStatsDialogOpen}
           onClose={closeUpdateStatsDialog}
           onTeamUpdate={handleTeamStatsUpdated}
@@ -375,6 +398,3 @@ const CardTitle = ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElem
 const CardContent = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={`p-6 pt-0 ${className}`} {...props} />
 );
-
-
-    
